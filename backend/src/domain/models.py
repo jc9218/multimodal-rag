@@ -108,6 +108,7 @@ class IngestionJob(BaseModel):
     job_id: str
     document_id: str
     filename: str
+    upload_id: Optional[str] = None
     status: JobStatusEnum = JobStatusEnum.PENDING
     progress: float = 0.0  # 0.0 to 1.0
     message: str = "Job initialized"

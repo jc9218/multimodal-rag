@@ -20,12 +20,15 @@ class MemoryJobRepository(JobRepositoryPort):
     # Objetivo: Create job.
     # Entradas: self, document_id, filename.
     # Salida: IngestionJob.
-    def create_job(self, document_id: str, filename: str) -> IngestionJob:
+    def create_job(
+        self, document_id: str, filename: str, upload_id: Optional[str] = None
+    ) -> IngestionJob:
         job_id = str(uuid.uuid4())
         job = IngestionJob(
             job_id=job_id,
             document_id=document_id,
             filename=filename,
+            upload_id=upload_id,
             status=JobStatusEnum.PENDING,
             progress=0.0,
             message="Documento en cola para procesamiento...",
@@ -33,6 +36,13 @@ class MemoryJobRepository(JobRepositoryPort):
         with self._lock:
             self._jobs[job_id] = job
         return job
+
+    def get_job_by_upload_id(self, upload_id: str) -> Optional[IngestionJob]:
+        with self._lock:
+            return next(
+                (job for job in self._jobs.values() if job.upload_id == upload_id),
+                None,
+            )
 
     # Objetivo: Get job.
     # Entradas: self, job_id.

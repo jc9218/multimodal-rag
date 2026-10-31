@@ -7,9 +7,9 @@ import ChatHeader from "./chat/ChatHeader";
 import ChatMessageList from "./chat/ChatMessageList";
 import ChatInput from "./chat/ChatInput";
 
-// Clase: contrato de datos ChatInterfaceProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract: ChatInterfaceProps.
+// Inputs: active chat, indexed documents, message and chat manipulation callbacks, optional sidebar toggle.
+// Output: Main chat viewport component.
 interface ChatInterfaceProps {
   chat: ChatSession;
   allIndexedDocs: IndexedDoc[];
@@ -18,6 +18,7 @@ interface ChatInterfaceProps {
   onToggleDoc: (chatId: string, docId: string) => void;
   onClearChat: (chatId: string) => void;
   onDeleteDoc?: (docId: string, docName: string) => void;
+  onToggleSidebar?: () => void;
 }
 
 export default function ChatInterface({
@@ -27,6 +28,7 @@ export default function ChatInterface({
   onRenameChat,
   onToggleDoc,
   onClearChat,
+  onToggleSidebar,
 }: ChatInterfaceProps) {
   const [loading, setLoading] = useState(false);
 
@@ -147,6 +149,7 @@ export default function ChatInterface({
         onRenameChat={onRenameChat}
         onToggleDoc={onToggleDoc}
         onClearChat={onClearChat}
+        onToggleSidebar={onToggleSidebar}
       />
       <ChatMessageList messages={chat.messages} loading={loading} />
       <ChatInput

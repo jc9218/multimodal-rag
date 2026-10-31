@@ -53,6 +53,7 @@ export default function Home() {
   const [activeChatId, setActiveChatId] = useState<string>("");
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const activeChatIdRef = useRef(activeChatId);
   useEffect(() => {
@@ -523,13 +524,16 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100">
-      {/* Top Navbar */}
-      <Navbar onOpenSkills={() => setShowSkillsModal(true)} />
+    <div className="flex flex-col h-[100dvh] bg-slate-950 text-slate-100 overflow-hidden">
+      {/* Top Navbar with Responsive Mobile Drawer Trigger */}
+      <Navbar
+        onOpenSkills={() => setShowSkillsModal(true)}
+        onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+      />
 
       {/* Main Content Body */}
-      <div className="flex-1 flex overflow-hidden p-6 gap-6">
-        {/* Left Modular Sidebar */}
+      <div className="flex-1 flex overflow-hidden p-2 sm:p-4 md:p-6 gap-3 sm:gap-6 relative">
+        {/* Modular Sidebar (Desktop Persistent + Mobile Slide-Over Drawer) */}
         <Sidebar
           chats={chats}
           activeChat={activeChat}
@@ -537,9 +541,17 @@ export default function Home() {
           activeChatDocs={activeChatDocs}
           otherAvailableDocs={otherAvailableDocs}
           showAttachMenu={showAttachMenu}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
           onDocumentIndexed={handleDocumentIndexed}
-          onSelectChat={(id) => setActiveChatId(id)}
-          onCreateChat={handleCreateChat}
+          onSelectChat={(id) => {
+            setActiveChatId(id);
+            setIsMobileSidebarOpen(false);
+          }}
+          onCreateChat={() => {
+            handleCreateChat();
+            setIsMobileSidebarOpen(false);
+          }}
           onDeleteChat={handleDeleteChat}
           onToggleAttachMenu={() => setShowAttachMenu((prev) => !prev)}
           onAttachDoc={(chatId, docId) => handleToggleDocForActiveChat(chatId, docId)}
@@ -548,7 +560,7 @@ export default function Home() {
         />
 
         {/* Right Main Chat Panel */}
-        <main className="flex-1 h-full overflow-hidden">
+        <main className="flex-1 h-full min-w-0 overflow-hidden">
           <ChatInterface
             chat={activeChat}
             allIndexedDocs={indexedDocs}
@@ -557,6 +569,7 @@ export default function Home() {
             onToggleDoc={handleToggleDocForActiveChat}
             onClearChat={handleClearChat}
             onDeleteDoc={handleDeleteDocument}
+            onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
           />
         </main>
       </div>

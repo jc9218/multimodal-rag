@@ -94,37 +94,38 @@ export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
-              <Sparkles className="w-5 h-5" />
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+            <div className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 shrink-0">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="font-bold text-base text-slate-100 flex items-center space-x-2">
-                <span>Skills & Capacidades del Motor RAG</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono">
-                  6 Habilidades Activas
+            <div className="min-w-0">
+              <h2 className="font-bold text-sm sm:text-base text-slate-100 flex items-center space-x-1.5 sm:space-x-2 truncate">
+                <span className="truncate">Skills del Motor RAG</span>
+                <span className="hidden sm:inline-block text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-mono shrink-0">
+                  6 Habilidades
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Módulos de arquitectura limpia, recuperación híbrida e inferencia multimodal
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                Arquitectura limpia, recuperación híbrida e inferencia multimodal
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition"
+            className="p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg transition shrink-0 cursor-pointer"
             title="Cerrar modal"
+            aria-label="Cerrar modal de habilidades"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Content - Skills Cards */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-3.5">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {SKILLS_LIST.map((skill, idx) => (
               <div

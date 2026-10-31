@@ -41,6 +41,73 @@ describe("API client", () => {
   });
 
   it("surfaces upload API failures instead of returning success", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ detail: "PDF inválido" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      uploadDocument(new File(["not a pdf"], "manual.pdf", { type: "application/pdf" }), 100, 3)
+    ).rejects.toThrow("PDF inválido");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries transient upload failures and returns the successful job", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "Render despertando" }), { status: 503 })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ job_id: "job-1", document_id: "doc-1", filename: "manual.pdf" }),
+          { status: 202, headers: { "Content-Type": "application/json" } }
+        )
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = uploadDocument(
+      new File(["%PDF-1.7"], "manual.pdf", { type: "application/pdf" }),
+      100,
+      2
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await expect(promise).resolves.toMatchObject({ job_id: "job-1" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("retries quota responses during upload", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: "Quota excedida" }), { status: 429 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ job_id: "job-2", document_id: "doc-2", filename: "manual.pdf" }),
+          { status: 202 }
+        )
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = uploadDocument(
+      new File(["%PDF-1.7"], "manual.pdf", { type: "application/pdf" }),
+      100,
+      2
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+
+    await expect(promise).resolves.toMatchObject({ job_id: "job-2" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("does not retry a definitive upload validation error", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -54,6 +121,7 @@ describe("API client", () => {
     await expect(
       uploadDocument(new File(["not a pdf"], "manual.pdf", { type: "application/pdf" }))
     ).rejects.toThrow("PDF inválido");
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it("sends selected document IDs without logging query content", async () => {

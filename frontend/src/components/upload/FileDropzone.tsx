@@ -113,7 +113,7 @@ export default function FileDropzone({
         <Files className="w-5 h-5 text-indigo-400" />
       </div>
       <p className="text-xs font-semibold text-slate-200">
-        Haz clic o arrastra uno o varios PDF aquí
+        Toca o arrastra uno o varios PDF aquí
       </p>
       <p className="text-[11px] text-slate-400 mt-1">
         PDFs de hasta {MAX_UPLOAD_SIZE_MB} MB · selección múltiple

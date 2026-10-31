@@ -55,13 +55,16 @@ class RedisJobRepository(JobRepositoryPort):
     # Objetivo: Create job.
     # Entradas: self, document_id, filename.
     # Salida: IngestionJob.
-    def create_job(self, document_id: str, filename: str) -> IngestionJob:
+    def create_job(
+        self, document_id: str, filename: str, upload_id: Optional[str] = None
+    ) -> IngestionJob:
         import uuid
         job_id = f"job_{uuid.uuid4().hex[:12]}"
         job = IngestionJob(
             job_id=job_id,
             document_id=document_id,
             filename=filename,
+            upload_id=upload_id,
             status=JobStatusEnum.PENDING,
             progress=0.0,
             message="Documento en cola para procesamiento...",
@@ -71,12 +74,32 @@ class RedisJobRepository(JobRepositoryPort):
             try:
                 key = self._job_key(job_id)
                 self._redis_client.set(key, job.model_dump_json(), ex=self.ttl_seconds)
+                if upload_id:
+                    self._redis_client.set(
+                        self._upload_key(upload_id), job_id, ex=self.ttl_seconds
+                    )
                 return job
             except Exception as e:
                 logger.error(f"Redis error creating job {job_id}: {e}")
 
         self._memory_fallback[job_id] = job
         return job
+
+    def _upload_key(self, upload_id: str) -> str:
+        return f"multimodal_rag:upload:{upload_id}"
+
+    def get_job_by_upload_id(self, upload_id: str) -> Optional[IngestionJob]:
+        if self._redis_client:
+            try:
+                job_id = self._redis_client.get(self._upload_key(upload_id))
+                if job_id:
+                    return self.get_job(job_id)
+            except Exception as e:
+                logger.error(f"Redis error getting upload id {upload_id}: {e}")
+        return next(
+            (job for job in self._memory_fallback.values() if job.upload_id == upload_id),
+            None,
+        )
 
     # Objetivo: Get job.
     # Entradas: self, job_id.

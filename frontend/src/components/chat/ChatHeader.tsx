@@ -1,19 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles, Edit2, Check, X, FileText, Clock, Trash2, Lock } from "lucide-react";
+import { Sparkles, Edit2, Check, X, FileText, Clock, Trash2, Lock, Menu } from "lucide-react";
 import { ChatSession, IndexedDoc } from "@/types/chat";
 import { formatProcessedDate } from "@/lib/formatters";
 
-// Clase: contrato de datos ChatHeaderProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract: ChatHeaderProps.
+// Inputs: active chat session, indexed documents, title update and document toggle callbacks, optional sidebar toggle.
+// Output: Responsive header with title editing, document attachments popover, and status indicators.
 interface ChatHeaderProps {
   chat: ChatSession;
   allIndexedDocs: IndexedDoc[];
   onRenameChat: (chatId: string, newTitle: string) => void;
   onToggleDoc: (chatId: string, docId: string) => void;
   onClearChat: (chatId: string) => void;
+  onToggleSidebar?: () => void;
 }
 
 export default function ChatHeader({
@@ -22,6 +23,7 @@ export default function ChatHeader({
   onRenameChat,
   onToggleDoc,
   onClearChat,
+  onToggleSidebar,
 }: ChatHeaderProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(chat.title);
@@ -32,9 +34,6 @@ export default function ChatHeader({
     setIsEditingTitle(false);
   }, [chat.id, chat.title]);
 
-  // Objetivo: handleSaveTitle.
-  // Entradas: Ninguna..
-  // Salida: valor indicado por la firma o efecto de la operación.
   const handleSaveTitle = () => {
     const trimmed = titleInput.trim();
     if (trimmed && trimmed !== chat.title) {
@@ -49,12 +48,23 @@ export default function ChatHeader({
   );
 
   return (
-    <div className="px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20">
-          <Sparkles className="w-5 h-5" />
+    <div className="px-3 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+        {onToggleSidebar && (
+          <button
+            onClick={onToggleSidebar}
+            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition lg:hidden cursor-pointer shrink-0"
+            title="Abrir panel de chats y documentos"
+            aria-label="Abrir panel de navegación"
+          >
+            <Menu className="w-4 h-4 text-indigo-400" />
+          </button>
+        )}
+
+        <div className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-lg border border-indigo-500/20 shrink-0">
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
-        <div>
+        <div className="min-w-0">
           {isEditingTitle ? (
             <div className="flex items-center space-x-1.5">
               <input
@@ -63,14 +73,14 @@ export default function ChatHeader({
                 onChange={(e) => setTitleInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSaveTitle()}
                 autoFocus
-                className="bg-slate-950 border border-indigo-500 text-sm font-semibold text-white px-2 py-0.5 rounded outline-none"
+                className="bg-slate-950 border border-indigo-500 text-xs sm:text-sm font-semibold text-white px-2 py-0.5 rounded outline-none max-w-[140px] sm:max-w-xs"
               />
               <button
                 onClick={handleSaveTitle}
                 className="p-1 text-emerald-400 hover:text-emerald-300 cursor-pointer"
                 title="Guardar nombre"
               >
-                <Check className="w-4 h-4" />
+                <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               <button
                 onClick={() => {
@@ -80,55 +90,57 @@ export default function ChatHeader({
                 className="p-1 text-slate-400 hover:text-rose-400 cursor-pointer"
                 title="Cancelar"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center space-x-2">
-              <h2 className="font-semibold text-slate-100 text-sm">
+            <div className="flex items-center space-x-1.5 sm:space-x-2 min-w-0">
+              <h2 className="font-semibold text-slate-100 text-xs sm:text-sm truncate max-w-[130px] xs:max-w-[180px] sm:max-w-xs md:max-w-md">
                 {chat.title}
               </h2>
               <button
                 onClick={() => setIsEditingTitle(true)}
-                className="text-slate-500 hover:text-slate-300 transition cursor-pointer"
+                className="text-slate-500 hover:text-slate-300 transition cursor-pointer shrink-0"
                 title="Renombrar este chat"
               >
-                <Edit2 className="w-3.5 h-3.5" />
+                <Edit2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
           )}
-          <p className="text-xs text-slate-400">
+          <p className="text-[10px] sm:text-xs text-slate-400 truncate">
             {hasAttachedDocs
-              ? `Contexto activo: ${attachedDocNames.length} documento${
+              ? `Contexto: ${attachedDocNames.length} doc${
                   attachedDocNames.length > 1 ? "s" : ""
                 } vinculado${attachedDocNames.length > 1 ? "s" : ""}`
-              : "Sin documentos vinculados a este espacio"}
+              : "Sin documentos vinculados"}
           </p>
         </div>
       </div>
 
       {/* Right Action Bar */}
-      <div className="flex items-center space-x-2.5">
+      <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
         {/* Document Management Button */}
         <div className="relative">
           <button
             onClick={() => setShowDocSelector(!showDocSelector)}
-            className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 cursor-pointer"
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2 sm:px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1 sm:space-x-1.5 cursor-pointer"
+            title="Gestionar documentos asociados a este chat"
           >
-            <FileText className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Documentos ({chat.documentIds.length})</span>
+            <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <span className="hidden sm:inline">Documentos</span>
+            <span>({chat.documentIds.length})</span>
           </button>
 
           {/* Doc Selector Popover */}
           {showDocSelector && (
-            <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 z-50">
+            <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-72 max-w-sm bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 z-50">
               <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-2">
                 <span className="text-xs font-semibold text-slate-200">
                   Documentos para este chat
                 </span>
                 <button
                   onClick={() => setShowDocSelector(false)}
-                  className="text-slate-400 hover:text-slate-200 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-200 cursor-pointer p-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -183,23 +195,25 @@ export default function ChatHeader({
           <button
             onClick={() => onClearChat(chat.id)}
             title="Limpiar mensajes de este chat"
-            className="text-[11px] text-slate-400 hover:text-rose-400 bg-slate-800/80 hover:bg-rose-500/10 border border-slate-700 hover:border-rose-500/30 px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1.5 cursor-pointer"
+            className="text-[11px] text-slate-400 hover:text-rose-400 bg-slate-800/80 hover:bg-rose-500/10 border border-slate-700 hover:border-rose-500/30 px-2 sm:px-2.5 py-1.5 rounded-lg transition flex items-center space-x-1 sm:space-x-1.5 cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Limpiar</span>
+            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Limpiar</span>
           </button>
         )}
 
         {/* Status Badge */}
         {!hasAttachedDocs ? (
-          <span className="text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1.5 rounded-full flex items-center space-x-1.5 font-medium">
-            <Lock className="w-3.5 h-3.5" />
-            <span>Sin Documentos</span>
+          <span className="text-[10px] sm:text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 sm:px-2.5 py-1.5 rounded-full flex items-center space-x-1 font-medium">
+            <Lock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Sin Documentos</span>
+            <span className="sm:hidden">Bloqueado</span>
           </span>
         ) : (
-          <span className="text-[11px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2.5 py-1.5 rounded-full flex items-center space-x-1.5 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Contexto Activo</span>
+          <span className="text-[10px] sm:text-[11px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 sm:px-2.5 py-1.5 rounded-full flex items-center space-x-1 sm:space-x-1.5 font-medium">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            <span className="hidden sm:inline">Contexto Activo</span>
+            <span className="sm:hidden">Activo</span>
           </span>
         )}
       </div>

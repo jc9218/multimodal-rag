@@ -69,7 +69,20 @@ flowchart TD
 
 ## 2. Detailed Specification of Agents and Components
 
-### 📤 1. Upload & Queue Agent (`upload-queue-agent`)
+### 📱 1. Responsive & Mobile UI Agent (`mobile-ui-agent`)
+* **Purpose:** Provide an adaptive mobile-first and desktop-optimized user experience with fluid off-canvas navigation.
+* **Code Components:** `frontend/src/app/page.tsx`, `frontend/src/components/sidebar/Sidebar.tsx`, `frontend/src/components/common/Navbar.tsx`, `frontend/src/components/chat/ChatHeader.tsx`, `frontend/src/components/chat/ChatInput.tsx`
+* **Responsibilities:**
+  1. Off-canvas sliding drawer on mobile (`< lg`) with smooth transition (`translate-x-0` / `-translate-x-full`) and backdrop overlay dismissal.
+  2. Dual hamburger button access in both top `Navbar` and `ChatHeader` for one-thumb reachability on mobile devices.
+  3. Dynamic viewport adaptation using `h-[100dvh]` to eliminate scrolling overflow caused by mobile browser address bars (Safari/Chrome).
+  4. iOS auto-zoom prevention: enforces `text-base sm:text-sm` (16px font-size) on chat input to maintain UI scale on mobile focus.
+  5. Touch target accessibility: complies with mobile a11y standards maintaining $\ge 44 \times 44\text{ px}$ interactive touch targets.
+  6. Auto-dismissal of mobile drawer upon selecting or creating chats or completing document uploads.
+
+---
+
+### 📤 2. Upload & Queue Agent (`upload-queue-agent`)
 * **Purpose:** Enable bulk upload of multiple PDF files and manage an ordered processing queue that protects infrastructure resources.
 * **Code Components:** `frontend/src/components/upload/FileDropzone.tsx`, `frontend/src/components/UploadModal.tsx`, `frontend/src/components/upload/IngestionProgressCard.tsx`
 * **Responsibilities:**

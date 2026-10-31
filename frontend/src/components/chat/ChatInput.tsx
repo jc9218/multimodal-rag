@@ -35,7 +35,7 @@ export default function ChatInput({
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-4 border-t border-slate-800 bg-slate-900/90 flex space-x-3 shrink-0"
+      className="p-2.5 sm:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center space-x-2 sm:space-x-3 shrink-0"
     >
       <input
         type="text"
@@ -43,16 +43,17 @@ export default function ChatInput({
         onChange={(e) => setInput(e.target.value)}
         placeholder={
           !hasAttachedDocs
-            ? "🔒 Chat bloqueado: Sube o asocia al menos un documento PDF para comenzar..."
-            : `Pregunta sobre ${chatTitle} (se mantiene el contexto del chat)...`
+            ? "🔒 Chat bloqueado: Asocia un PDF..."
+            : `Pregunta sobre ${chatTitle}...`
         }
         disabled={!hasAttachedDocs || loading}
-        className="flex-1 bg-slate-950 border border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none transition"
+        className="flex-1 bg-slate-950 border border-slate-700 disabled:opacity-40 disabled:cursor-not-allowed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-base sm:text-sm text-slate-100 placeholder-slate-500 outline-none transition"
       />
       <button
         type="submit"
         disabled={!hasAttachedDocs || loading || !input.trim()}
-        className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl transition flex items-center justify-center font-medium shadow-md shadow-indigo-600/20 cursor-pointer"
+        className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 sm:px-5 py-2.5 min-h-[44px] min-w-[44px] rounded-xl transition flex items-center justify-center font-medium shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+        aria-label="Enviar mensaje"
       >
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin" />

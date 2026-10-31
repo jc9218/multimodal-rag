@@ -46,6 +46,17 @@ async def upload_document(
     file: UploadFile = File(...),
     app_container: Container = Depends(get_container),
 ):
+    upload_id = request.headers.get("X-Upload-Id", "").strip()
+    if upload_id:
+        existing_job = app_container.job_repo.get_job_by_upload_id(upload_id)
+        if existing_job:
+            return UploadResponse(
+                job_id=existing_job.job_id,
+                document_id=existing_job.document_id,
+                filename=existing_job.filename,
+                message="La subida ya estaba registrada; se reutiliza el procesamiento existente.",
+            )
+
     filename = os.path.basename(file.filename or "")
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -114,6 +125,7 @@ async def upload_document(
         job = app_container.job_repo.create_job(
             document_id=document_id,
             filename=filename,
+            upload_id=upload_id or None,
         )
     except Exception as exc:
         logger.error(

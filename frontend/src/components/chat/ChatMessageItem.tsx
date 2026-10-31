@@ -20,18 +20,18 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
 
   return (
     <div
-      className={`flex space-x-3.5 ${
+      className={`flex space-x-2 sm:space-x-3.5 ${
         isUser ? "justify-end" : "justify-start"
       } animate-in fade-in duration-200`}
     >
       {!isUser && (
-        <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
-          <Bot className="w-4 h-4" />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 mt-0.5">
+          <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       )}
 
       <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+        className={`max-w-[92%] sm:max-w-[85%] rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm leading-relaxed shadow-sm ${
           isUser
             ? "bg-indigo-600 text-white rounded-tr-none font-normal"
             : message.isError
@@ -40,9 +40,9 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
         }`}
       >
         {isUser ? (
-          <div className="whitespace-pre-wrap">{message.text}</div>
+          <div className="whitespace-pre-wrap break-words">{message.text}</div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-hidden">
             {message.isError && (
               <div className="flex items-center space-x-1.5 text-rose-400 font-medium text-xs mb-1">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -50,7 +50,7 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
               </div>
             )}
 
-            <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-table:text-xs">
+            <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-table:text-xs overflow-x-auto break-words">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {message.text}
               </ReactMarkdown>
@@ -70,8 +70,8 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
       </div>
 
       {isUser && (
-        <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 mt-0.5">
-          <User className="w-4 h-4" />
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 mt-0.5">
+          <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </div>
       )}
     </div>

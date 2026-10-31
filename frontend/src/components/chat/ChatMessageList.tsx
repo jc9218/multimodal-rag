@@ -21,13 +21,13 @@ export default function ChatMessageList({ messages, loading }: ChatMessageListPr
   }, [messages, loading]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-5">
+    <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3.5 sm:space-y-5">
       {messages.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
-          <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl mb-4 text-indigo-400">
-            <Sparkles className="w-8 h-8" />
+        <div className="h-full flex flex-col items-center justify-center text-center p-4 sm:p-8 text-slate-500">
+          <div className="p-3 sm:p-4 bg-slate-900 border border-slate-800 rounded-2xl mb-3 sm:mb-4 text-indigo-400">
+            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
-          <h3 className="text-slate-300 font-semibold mb-1">
+          <h3 className="text-slate-300 font-semibold mb-1 text-sm sm:text-base">
             Espacio de Consulta Técnica
           </h3>
           <p className="text-xs max-w-sm text-slate-400">
@@ -39,13 +39,13 @@ export default function ChatMessageList({ messages, loading }: ChatMessageListPr
       )}
 
       {loading && (
-        <div className="flex items-center space-x-3 text-slate-400 text-xs animate-in fade-in duration-150">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-            <Bot className="w-4 h-4" />
+        <div className="flex items-center space-x-2.5 sm:space-x-3 text-slate-400 text-xs animate-in fade-in duration-150">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+            <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
-          <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none px-4 py-3 flex items-center space-x-2.5 shadow-sm">
-            <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
-            <span className="text-slate-300">
+          <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl rounded-tl-none px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center space-x-2.5 shadow-sm">
+            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-indigo-400 shrink-0" />
+            <span className="text-slate-300 text-xs">
               Consultando documentos técnicos y diagramas...
             </span>
           </div>

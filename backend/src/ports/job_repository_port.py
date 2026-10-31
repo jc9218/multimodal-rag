@@ -11,7 +11,13 @@ class JobRepositoryPort(ABC):
     # Entradas: self, document_id, filename.
     # Salida: IngestionJob.
     @abstractmethod
-    def create_job(self, document_id: str, filename: str) -> IngestionJob:
+    def create_job(
+        self, document_id: str, filename: str, upload_id: Optional[str] = None
+    ) -> IngestionJob:
+        pass
+
+    @abstractmethod
+    def get_job_by_upload_id(self, upload_id: str) -> Optional[IngestionJob]:
         pass
 
     # Objetivo: Get job.

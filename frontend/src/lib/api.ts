@@ -1,5 +1,33 @@
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
+const UPLOAD_RETRY_DELAYS_MS = [2000, 5000];
+
+// Objetivo: esperar antes de repetir una operación transitoria.
+// Entradas: delayMs: milisegundos de espera.
+// Salida: promesa resuelta después del intervalo indicado.
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+// Objetivo: clasificar si un estado HTTP puede recuperarse reintentando.
+// Entradas: status: código HTTP recibido.
+// Salida: true para errores transitorios; false para errores definitivos.
+function isRetryableUploadStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+// Objetivo: decidir si un error de subida puede reintentarse.
+// Entradas: error: error producido por fetch o por la respuesta HTTP.
+// Salida: true cuando la causa puede ser temporal.
+function isRetryableUploadError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return true;
+  const candidate = error as { status?: number; name?: string };
+  return (
+    candidate.name === "AbortError" ||
+    candidate.status === undefined ||
+    isRetryableUploadStatus(candidate.status)
+  );
+}
 
 // Clase: contrato de datos BoundingBox.
 // Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
@@ -111,46 +139,73 @@ export async function checkHealth(): Promise<boolean> {
 
 export async function uploadDocument(
   file: File,
-  timeoutMs: number = 120000
+  timeoutMs: number = 120000,
+  maxAttempts: number = UPLOAD_RETRY_DELAYS_MS.length + 1
 ): Promise<{ job_id: string; document_id: string; filename: string }> {
   const url = `${API_BASE_URL}/api/v1/documents/upload`;
+  const uploadId = crypto.randomUUID();
   logApiRequest("POST", url, { filename: file.name, sizeBytes: file.size });
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const res = await fetch(url, {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Error al subir el documento` }));
-      logApiError(url, res.status, err);
-      throw new Error(err.detail || "Error al subir documento");
+      const res = await fetch(url, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+        headers: { "X-Upload-Id": uploadId },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({
+          detail: `HTTP ${res.status}: Error al subir el documento`,
+        }));
+        const uploadError = new Error(err.detail || "Error al subir documento") as Error & {
+          status?: number;
+        };
+        uploadError.status = res.status;
+        logApiError(url, res.status, err);
+        throw uploadError;
+      }
+
+      const data = await res.json();
+      logApiResponse("POST", url, res.status, data);
+      return data;
+    } catch (error: unknown) {
+      const retryable = isRetryableUploadError(error);
+      const hasAttemptsLeft = attempt < maxAttempts - 1;
+      if (!retryable || !hasAttemptsLeft) {
+        if (error instanceof Error && error.name === "AbortError") {
+          logApiError(url, "TIMEOUT", "La subida superó el tiempo de espera.");
+          throw new Error(
+            "El servidor en la nube de Render tardó en responder después de varios intentos. "
+            + "Puede estar despertándose de su estado inactivo; reintenta en unos segundos."
+          );
+        }
+        if (!(error instanceof Error && error.message.includes("HTTP"))) {
+          logApiError(url, "NETWORK_ERROR", error);
+        }
+        throw error;
+      }
+
+      const delayMs = UPLOAD_RETRY_DELAYS_MS[attempt] ?? UPLOAD_RETRY_DELAYS_MS.at(-1)!;
+      logApiError(url, `RETRY_${attempt + 1}`, {
+        error,
+        delayMs,
+        reason: "Error transitorio durante la subida",
+      });
+      await wait(delayMs);
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = await res.json();
-    logApiResponse("POST", url, res.status, data);
-    return data;
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    if (error?.name === "AbortError") {
-      logApiError(url, "TIMEOUT", "La subida superó el tiempo de espera.");
-      throw new Error(
-        "El servidor en la nube de Render tardó en responder (puede estar despertándose de su estado inactivo). Por favor reintenta en unos segundos."
-      );
-    }
-    if (!error?.message?.includes("HTTP")) {
-      logApiError(url, "NETWORK_ERROR", error);
-    }
-    throw error;
   }
+
+  throw new Error("No fue posible subir el documento.");
 }
 
 // Objetivo: getJobStatus.
