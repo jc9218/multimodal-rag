@@ -27,7 +27,10 @@ class Settings(BaseSettings):
     LLM_MAX_OUTPUT_TOKENS: int = 512
     LLM_THINKING_BUDGET: int = 0
     OCR_DPI: int = 120
-    MAX_UPLOAD_SIZE_MB: int = 50
+    # Free Render instances and low-quota models need a conservative upload
+    # limit to avoid exhausting web-process memory during PDF parsing.
+    RESOURCE_PROFILE: str = "free"
+    MAX_UPLOAD_SIZE_MB: int = 10
     EMBEDDING_BATCH_SIZE: int = 10
     QDRANT_UPSERT_BATCH_SIZE: int = 10
     BM25_MAX_CHUNKS_IN_MEMORY: int = 2000

@@ -340,7 +340,7 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * Build Command: `pip install -r requirements.txt`
    * Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
    * Configurar variables en el panel: `LLM_PROVIDER`, `LLM_PROVIDER_API_KEY`, `LLM_MODEL`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION`, `LLM_MAX_CONTEXT_CHARS`, `LLM_MAX_HISTORY_CHARS`, `LLM_MAX_OUTPUT_TOKENS`, `QDRANT_URL`, `QDRANT_API_KEY`.
-   * **Nota sobre la capa gratuita de Render:** La instancia hiberna tras 15 minutos sin peticiones. La primera llamada puede tardar ~50 segundos en despertar; el cliente web incluye tolerancia extendida de 120s para soportar este comportamiento sin fallar.
+   * **Nota sobre la capa gratuita de Render:** La instancia hiberna tras 15 minutos sin peticiones. La primera llamada puede tardar ~50 segundos en despertar; el cliente web incluye tolerancia extendida de 120s para soportar este comportamiento sin fallar. El perfil `RESOURCE_PROFILE=free` limita los PDF a `MAX_UPLOAD_SIZE_MB=10` para reducir el riesgo de quedarse sin memoria o cuota durante la extracción, OCR y embeddings. En una instancia con más recursos usa `RESOURCE_PROFILE=standard` y configura explícitamente `MAX_UPLOAD_SIZE_MB=50` (o un valor menor según la cuota del modelo).
    * Configura `REDIS_URL` con la URL de una instancia Redis administrada, no con `redis://redis:6379/0` fuera de Docker Compose.
    * Configura `STORAGE_PATH` sobre un disco persistente de Render. El endpoint `/ready` devuelve `503` en producción si Redis no está disponible, evitando aceptar cargas que no podrán recuperarse después de un redeploy.
    * Si aparece `Cannot recover job: upload is missing`, Redis conservó el estado del job pero el PDF no existe en `STORAGE_PATH/uploads`. Verifica el disco persistente, el `mount path` y que `STORAGE_PATH` apunte a ese montaje; ese archivo debe volver a subirse si ya fue eliminado por un despliegue anterior.
@@ -351,6 +351,7 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * Importar el repositorio en [vercel.com](https://vercel.com).
    * Root Directory: `frontend`
    * Variable de entorno: `NEXT_PUBLIC_API_URL=https://<tu-servicio>.onrender.com`
+   * Define `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` con el mismo valor de `MAX_UPLOAD_SIZE_MB` para rechazar archivos grandes desde el navegador antes de iniciar la transferencia.
 
 ---
 

@@ -2,7 +2,7 @@ import logging
 import os
 import time
 import uuid
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from src.adapters.storage.local_storage import UploadSizeExceededError
@@ -33,6 +33,7 @@ class UploadResponse(BaseModel):
 )
 async def upload_document(
     background_tasks: BackgroundTasks,
+    request: Request,
     file: UploadFile = File(...),
     app_container: Container = Depends(get_container),
 ):
@@ -42,6 +43,22 @@ async def upload_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Solo se admiten documentos en formato PDF.",
         )
+
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_FILE_SIZE + 1024 * 1024:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=(
+                        f"El archivo excede el tamaño máximo permitido de "
+                        f"{MAX_FILE_SIZE // (1024 * 1024)} MB para este despliegue."
+                    ),
+                )
+        except ValueError:
+            logger.warning(
+                "[DocumentsRoute:upload_document] Ignoring invalid Content-Length header."
+            )
 
     # Validate PDF signature from header (first 1024 bytes) without loading entire 50MB into RAM
     header = await file.read(1024)

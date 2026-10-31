@@ -3,6 +3,11 @@
 import React, { useState } from "react";
 import { UploadCloud, Files } from "lucide-react";
 
+const MAX_UPLOAD_SIZE_MB = Number(
+  process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB || "10"
+);
+const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
 interface FileDropzoneProps {
   uploading: boolean;
   onFilesSelected: (files: File[]) => void;
@@ -21,17 +26,25 @@ export default function FileDropzone({
     const files = Array.from(fileList);
     const validPdfs: File[] = [];
     const invalidNames: string[] = [];
+    const oversizedNames: string[] = [];
 
     for (const f of files) {
-      if (f.name.toLowerCase().endsWith(".pdf")) {
-        validPdfs.push(f);
-      } else {
+      if (!f.name.toLowerCase().endsWith(".pdf")) {
         invalidNames.push(f.name);
+      } else if (f.size > MAX_UPLOAD_SIZE_BYTES) {
+        oversizedNames.push(f.name);
+      } else {
+        validPdfs.push(f);
       }
     }
 
     if (invalidNames.length > 0) {
       onError(`Solo se admiten archivos PDF técnicos. Ignorados: ${invalidNames.join(", ")}`);
+    }
+    if (oversizedNames.length > 0) {
+      onError(
+        `El tamaño máximo por PDF es ${MAX_UPLOAD_SIZE_MB} MB. Ignorados: ${oversizedNames.join(", ")}`
+      );
     }
 
     return validPdfs;
@@ -85,7 +98,7 @@ export default function FileDropzone({
         Haz clic o arrastra uno o varios PDF aquí
       </p>
       <p className="text-[11px] text-slate-400 mt-1">
-        Soporta selección múltiple de documentos técnicos
+        PDFs de hasta {MAX_UPLOAD_SIZE_MB} MB · selección múltiple
       </p>
       <input
         type="file"
