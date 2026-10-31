@@ -41,6 +41,29 @@ class IngestDocumentUseCase:
         job = self.job_repo.get_job(job_id)
         return job is not None and job.status == JobStatusEnum.CANCELLED
 
+    def _cleanup_failed_ingestion(self, document_id: str) -> None:
+        """Remove partial vectors, source files, and derived images after failure."""
+        try:
+            self.vector_store.delete_document(document_id)
+        except Exception:
+            logger.exception(
+                "[IngestDocumentUseCase] Failed to remove partial vectors document_id=%s",
+                document_id,
+            )
+        try:
+            self.parser.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception(
+                "[IngestDocumentUseCase] Failed to remove source artifacts document_id=%s",
+                document_id,
+            )
+
+    def _cancel_and_cleanup(self, job_id: str, document_id: str) -> bool:
+        if not self._is_cancelled(job_id):
+            return False
+        self._cleanup_failed_ingestion(document_id)
+        return True
+
     def _is_quota_error(self, exc: Exception) -> bool:
         """Detects rate limits, quota exhaustion or 429 from LLM providers."""
         err = str(exc).lower()
@@ -105,12 +128,14 @@ class IngestDocumentUseCase:
         """
         if self._is_cancelled(job_id):
             logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} was cancelled before starting.")
+            self._cleanup_failed_ingestion(document_id)
             return
 
         with _INGESTION_SEMAPHORE:
             try:
                 if self._is_cancelled(job_id):
                     logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} was cancelled before acquisition.")
+                    self._cleanup_failed_ingestion(document_id)
                     return
 
                 ingestion_started = time.monotonic()
@@ -149,6 +174,7 @@ class IngestDocumentUseCase:
 
                 if self._is_cancelled(job_id):
                     logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} was cancelled after extraction.")
+                    self._cleanup_failed_ingestion(document_id)
                     return
 
                 if not chunks:
@@ -204,6 +230,7 @@ class IngestDocumentUseCase:
                 for i in range(0, total_chunks, batch_size):
                     if self._is_cancelled(job_id):
                         logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} cancelled during batch {i}.")
+                        self._cleanup_failed_ingestion(document_id)
                         return
 
                     batch_chunks = chunks[i : i + batch_size]
@@ -228,6 +255,7 @@ class IngestDocumentUseCase:
                                 can_continue = self._wait_for_quota_recovery(job_id, delay, cur_prog)
                                 if not can_continue:
                                     logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} cancelled while waiting for quota.")
+                                    self._cleanup_failed_ingestion(document_id)
                                     return
                                 continue
                             raise
@@ -258,6 +286,7 @@ class IngestDocumentUseCase:
 
                 if self._is_cancelled(job_id):
                     logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} cancelled before indexing.")
+                    self._cleanup_failed_ingestion(document_id)
                     return
 
                 # Step 3: Indexing in Vector Store (Qdrant + BM25)
@@ -329,3 +358,4 @@ class IngestDocumentUseCase:
                     message=user_msg,
                     error=user_msg,
                 )
+                self._cleanup_failed_ingestion(document_id)

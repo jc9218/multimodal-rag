@@ -32,6 +32,7 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         )
         self._headers = {
             "Authorization": f"Bearer {service_role_key}",
+            "Authorization": "Bearer " + service_role_key,
             "apikey": service_role_key,
         }
 
@@ -137,16 +138,16 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
 
     def delete_document_files(self, document_id: str) -> None:
         object_name_prefix = f"{document_id}_"
-        response = httpx.post(
-            f"{self._object_url}/remove",
-            headers={**self._headers, "Content-Type": "application/json"},
-            json={
-                "prefixes": [
+        try:
+            response = httpx.post(
+                f"{self._object_url}/remove",
+                headers={**self._headers, "Content-Type": "application/json"},
+                json=[
                     f"uploads/{object_name_prefix}",
                     f"images/{document_id}/",
-                ]
-            },
-            timeout=30.0,
-        )
-        response.raise_for_status()
-        super().delete_document_files(document_id)
+                ],
+                timeout=30.0,
+            )
+            response.raise_for_status()
+        finally:
+            super().delete_document_files(document_id)

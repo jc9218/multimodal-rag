@@ -94,10 +94,26 @@ async def upload_document(
             detail="No fue posible guardar el archivo en el almacenamiento del servidor.",
         ) from exc
 
-    job = app_container.job_repo.create_job(
-        document_id=document_id,
-        filename=filename,
-    )
+    try:
+        job = app_container.job_repo.create_job(
+            document_id=document_id,
+            filename=filename,
+        )
+    except Exception as exc:
+        logger.error(
+            "[DocumentsRoute:upload_document] Job creation failed; cleaning uploaded artifacts.",
+            exc_info=True,
+        )
+        try:
+            app_container.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception(
+                "[DocumentsRoute:upload_document] Failed to clean upload after job creation failure."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No fue posible registrar el procesamiento. El archivo no fue conservado.",
+        ) from exc
 
     logger.info(
         "[DocumentsRoute:upload_document] upload_complete "
