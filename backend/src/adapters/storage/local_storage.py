@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from typing import BinaryIO, Optional, Union
 from src.ports.storage_port import StoragePort
 from src.infrastructure.config import settings
@@ -12,6 +13,10 @@ class UploadSizeExceededError(ValueError):
     """Raised when a streamed upload exceeds the configured safety limit."""
 
 
+class StorageCapacityExceededError(ValueError):
+    """Raised when local storage cannot safely accept another artifact."""
+
+
 class LocalStorageAdapter(StoragePort):
     def __init__(self, base_storage_path: str = "./storage"):
         self.base_path = os.path.abspath(base_storage_path)
@@ -19,6 +24,25 @@ class LocalStorageAdapter(StoragePort):
         self.images_dir = os.path.join(self.base_path, "images")
         os.makedirs(self.uploads_dir, exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
+
+    def _ensure_capacity(self, additional_bytes: int) -> None:
+        usage = shutil.disk_usage(self.base_path)
+        configured_limit = settings.MAX_LOCAL_STORAGE_MB * 1024 * 1024
+        current_usage = 0
+        for root, _, files in os.walk(self.base_path):
+            for name in files:
+                try:
+                    current_usage += os.path.getsize(os.path.join(root, name))
+                except OSError:
+                    continue
+        minimum_free = settings.MIN_FREE_STORAGE_MB * 1024 * 1024
+        if (
+            current_usage + additional_bytes > configured_limit
+            or usage.free - additional_bytes < minimum_free
+        ):
+            raise StorageCapacityExceededError(
+                "Local storage capacity is insufficient for this artifact."
+            )
 
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
         safe_filename = os.path.basename(filename)
@@ -28,6 +52,7 @@ class LocalStorageAdapter(StoragePort):
                 if isinstance(content, (bytes, bytearray)):
                     if len(content) > MAX_UPLOAD_SIZE:
                         raise UploadSizeExceededError
+                    self._ensure_capacity(len(content))
                     f.write(content)
                 else:
                     total_bytes = 0
@@ -35,6 +60,7 @@ class LocalStorageAdapter(StoragePort):
                         total_bytes += len(chunk)
                         if total_bytes > MAX_UPLOAD_SIZE:
                             raise UploadSizeExceededError
+                        self._ensure_capacity(len(chunk))
                         f.write(chunk)
         except Exception:
             if os.path.exists(dest_path):
@@ -50,6 +76,7 @@ class LocalStorageAdapter(StoragePort):
         doc_img_dir = os.path.join(self.images_dir, safe_document_id)
         os.makedirs(doc_img_dir, exist_ok=True)
         dest_path = os.path.join(doc_img_dir, safe_image_filename)
+        self._ensure_capacity(len(image_bytes))
         with open(dest_path, "wb") as f:
             f.write(image_bytes)
         return dest_path

@@ -3,7 +3,11 @@ from io import BytesIO
 import pytest
 
 from src.adapters.storage import local_storage
-from src.adapters.storage.local_storage import LocalStorageAdapter, UploadSizeExceededError
+from src.adapters.storage.local_storage import (
+    LocalStorageAdapter,
+    StorageCapacityExceededError,
+    UploadSizeExceededError,
+)
 
 
 def test_save_upload_streams_binary_file(tmp_path):
@@ -24,6 +28,16 @@ def test_save_upload_removes_partial_file_when_stream_exceeds_limit(tmp_path, mo
     )
 
     with pytest.raises(UploadSizeExceededError):
+        storage.save_upload("document.pdf", BytesIO(b"%PDF-1.7"))
+
+    assert not (tmp_path / "uploads" / "document.pdf").exists()
+
+
+def test_save_upload_rejects_when_configured_local_quota_is_exceeded(tmp_path, monkeypatch):
+    storage = LocalStorageAdapter(str(tmp_path))
+    monkeypatch.setattr(local_storage.settings, "MAX_LOCAL_STORAGE_MB", 0)
+
+    with pytest.raises(StorageCapacityExceededError):
         storage.save_upload("document.pdf", BytesIO(b"%PDF-1.7"))
 
     assert not (tmp_path / "uploads" / "document.pdf").exists()

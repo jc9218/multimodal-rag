@@ -58,6 +58,17 @@ class IngestDocumentUseCase:
                 document_id,
             )
 
+    def _cleanup_local_cache(self, document_id: str) -> None:
+        cleanup = getattr(self.parser.storage, "cleanup_local_cache", None)
+        if cleanup:
+            try:
+                cleanup(document_id)
+            except Exception:
+                logger.exception(
+                    "[IngestDocumentUseCase] Failed to clean local cache document_id=%s",
+                    document_id,
+                )
+
     def _cancel_and_cleanup(self, job_id: str, document_id: str) -> bool:
         if not self._is_cancelled(job_id):
             return False
@@ -324,6 +335,7 @@ class IngestDocumentUseCase:
                     progress=1.0,
                     message=f"¡Documento listo! {indexed_count} fragmentos preparados para consulta.",
                 )
+                self._cleanup_local_cache(document_id)
                 logger.info(
                     "[IngestDocumentUseCase:execute_async] ingestion_complete "
                     f"job_id={job_id} document_id={document_id} "

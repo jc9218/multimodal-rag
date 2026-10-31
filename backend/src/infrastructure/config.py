@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     # Storage & Cache (Auxiliary Services)
     STORAGE_PATH: str = "./storage"
     STORAGE_PROVIDER: str = "local"
+    MAX_LOCAL_STORAGE_MB: int = 400
+    MIN_FREE_STORAGE_MB: int = 64
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_STORAGE_BUCKET: str = "documents"

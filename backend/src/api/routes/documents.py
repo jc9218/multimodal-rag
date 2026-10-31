@@ -5,7 +5,10 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from src.adapters.storage.local_storage import UploadSizeExceededError
+from src.adapters.storage.local_storage import (
+    StorageCapacityExceededError,
+    UploadSizeExceededError,
+)
 from src.domain.exceptions import JobNotFoundError
 from src.domain.models import IngestionJob, JobStatusEnum
 from src.infrastructure.container import Container, get_container
@@ -86,6 +89,15 @@ async def upload_document(
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"El archivo excede el tamaño máximo permitido de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
+        ) from None
+    except StorageCapacityExceededError:
+        try:
+            app_container.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception("[DocumentsRoute:upload_document] Storage cleanup failed after capacity rejection.")
+        raise HTTPException(
+            status_code=status.HTTP_507_INSUFFICIENT_STORAGE,
+            detail="El almacenamiento local no tiene espacio suficiente para conservar este archivo.",
         ) from None
     except Exception as exc:
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)

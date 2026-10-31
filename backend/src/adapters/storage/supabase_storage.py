@@ -39,6 +39,7 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
         safe_filename = os.path.basename(filename)
         object_url = f"{self._object_url}/uploads/{safe_filename}"
+        self._ensure_capacity(MAX_UPLOAD_SIZE)
         with tempfile.NamedTemporaryFile(
             mode="w+b", dir=self.uploads_dir, prefix=".upload-", delete=False
         ) as temp_file:
@@ -73,6 +74,9 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
                     os.remove(temp_path)
         return local_path
 
+    def cleanup_local_cache(self, document_id: str) -> None:
+        super().delete_document_files(document_id)
+
     def get_upload_path(self, document_id: str, filename: str) -> Optional[str]:
         safe_filename = os.path.basename(filename)
         if safe_filename != filename:
@@ -88,6 +92,7 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
             if response.status_code == 404:
                 return None
             response.raise_for_status()
+            self._ensure_capacity(len(response.content))
             with open(local_path, "wb") as downloaded:
                 downloaded.write(response.content)
             return local_path
