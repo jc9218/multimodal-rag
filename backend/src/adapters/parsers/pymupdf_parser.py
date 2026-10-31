@@ -10,7 +10,6 @@ except ImportError:
 from src.domain.models import BoundingBox, Chunk, ExtractedImage
 from src.ports.document_parser_port import DocumentParserPort
 from src.ports.storage_port import StoragePort
-from src.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -87,16 +86,6 @@ class PyMuPDFParser(DocumentParserPort):
                     image_bytes = extracted.get("image")
                     image_ext = extracted.get("ext", "png")
                     extracted_image_count += 1
-                    max_image_bytes = settings.MAX_EXTRACTED_IMAGE_MB * 1024 * 1024
-                    if len(image_bytes or b"") > max_image_bytes:
-                        logger.warning(
-                            "Skipping oversized embedded image page=%s xref=%s bytes=%s limit=%s",
-                            page_num,
-                            xref,
-                            len(image_bytes or b""),
-                            max_image_bytes,
-                        )
-                        continue
                     if extract_elapsed >= 0.5:
                         logger.info(
                             "Slow image extraction page=%s xref=%s duration=%.2fs bytes=%s",

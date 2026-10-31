@@ -294,7 +294,7 @@ class QdrantAdapter(VectorStorePort):
         try:
             offset = None
             total_recovered = 0
-            while len(self._bm25_chunk_ids) < self.bm25_max_chunks:
+            while True:
                 scroll_res = self.client.scroll(
                     collection_name=self.collection_name,
                     limit=250,
@@ -303,8 +303,6 @@ class QdrantAdapter(VectorStorePort):
                 )
                 points, next_offset = scroll_res
                 for pt in points:
-                    if len(self._bm25_chunk_ids) >= self.bm25_max_chunks:
-                        break
                     p = getattr(pt, "payload", None) or (pt.get("payload") if isinstance(pt, dict) else {}) or {}
                     cid = p.get("chunk_id")
                     text = p.get("text", "")
