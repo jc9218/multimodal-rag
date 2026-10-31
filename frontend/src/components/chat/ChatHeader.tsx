@@ -5,6 +5,9 @@ import { Sparkles, Edit2, Check, X, FileText, Clock, Trash2, Lock } from "lucide
 import { ChatSession, IndexedDoc } from "@/types/chat";
 import { formatProcessedDate } from "@/lib/formatters";
 
+// Clase: contrato de datos ChatHeaderProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatHeaderProps {
   chat: ChatSession;
   allIndexedDocs: IndexedDoc[];
@@ -29,6 +32,9 @@ export default function ChatHeader({
     setIsEditingTitle(false);
   }, [chat.id, chat.title]);
 
+  // Objetivo: handleSaveTitle.
+  // Entradas: Ninguna..
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleSaveTitle = () => {
     const trimmed = titleInput.trim();
     if (trimmed && trimmed !== chat.title) {

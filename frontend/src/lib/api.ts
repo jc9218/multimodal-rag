@@ -1,6 +1,9 @@
 const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 
+// Clase: contrato de datos BoundingBox.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface BoundingBox {
   page: number;
   x0: number;
@@ -9,6 +12,9 @@ export interface BoundingBox {
   y1: number;
 }
 
+// Clase: contrato de datos ExtractedImage.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface ExtractedImage {
   id: string;
   document_id: string;
@@ -21,6 +27,9 @@ export interface ExtractedImage {
   height_px: number;
 }
 
+// Clase: contrato de datos RetrievedChunk.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface RetrievedChunk {
   chunk_id: string;
   document_id: string;
@@ -32,6 +41,9 @@ export interface RetrievedChunk {
   associated_images: ExtractedImage[];
 }
 
+// Clase: contrato de datos QueryResponse.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface QueryResponse {
   query: string;
   answer: string;
@@ -40,6 +52,9 @@ export interface QueryResponse {
   is_defensive: boolean;
 }
 
+// Clase: contrato de datos IngestionJob.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface IngestionJob {
   job_id: string;
   document_id: string;
@@ -50,6 +65,9 @@ export interface IngestionJob {
   error?: string;
 }
 
+// Objetivo: logApiRequest.
+// Entradas: method: string, endpoint: string, payload?: Record<string, unknown>.
+// Salida: valor indicado por la firma o efecto de la operación.
 function logApiRequest(method: string, endpoint: string, payload?: Record<string, unknown>) {
   if (payload !== undefined) {
     console.log(`🚀 [Frontend API Request] ${method} ${endpoint}`, {
@@ -64,14 +82,23 @@ function logApiRequest(method: string, endpoint: string, payload?: Record<string
   }
 }
 
+// Objetivo: logApiResponse.
+// Entradas: method: string, endpoint: string, status: number | string, data: unknown.
+// Salida: valor indicado por la firma o efecto de la operación.
 function logApiResponse(method: string, endpoint: string, status: number | string, data: unknown) {
   console.log(`📡 [Frontend API Response] ${status} ${method} ${endpoint}`);
 }
 
+// Objetivo: logApiError.
+// Entradas: endpoint: string, status: number | string, errorDetail: unknown.
+// Salida: valor indicado por la firma o efecto de la operación.
 function logApiError(endpoint: string, status: number | string, errorDetail: unknown) {
   console.error(`🚨 [Frontend API Error] Endpoint: ${endpoint} | Status: ${status}`, errorDetail);
 }
 
+// Objetivo: checkHealth.
+// Entradas: Ninguna..
+// Salida: valor indicado por la firma o efecto de la operación.
 export async function checkHealth(): Promise<boolean> {
   const url = `${API_BASE_URL}/health`;
   try {
@@ -126,6 +153,9 @@ export async function uploadDocument(
   }
 }
 
+// Objetivo: getJobStatus.
+// Entradas: jobId: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export async function getJobStatus(jobId: string): Promise<IngestionJob> {
   const url = `${API_BASE_URL}/api/v1/jobs/${jobId}`;
   try {
@@ -144,6 +174,9 @@ export async function getJobStatus(jobId: string): Promise<IngestionJob> {
   }
 }
 
+// Objetivo: cancelJob.
+// Entradas: jobId: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export async function cancelJob(jobId: string): Promise<{ status: string; message: string }> {
   const url = `${API_BASE_URL}/api/v1/jobs/${jobId}/cancel`;
   logApiRequest("POST", url);
@@ -163,6 +196,9 @@ export async function cancelJob(jobId: string): Promise<{ status: string; messag
   }
 }
 
+// Clase: contrato de datos ChatHistoryPayload.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface ChatHistoryPayload {
   role: string;
   content: string;
@@ -224,6 +260,9 @@ export async function queryRAG(
   }
 }
 
+// Objetivo: getDocuments.
+// Entradas: Ninguna..
+// Salida: valor indicado por la firma o efecto de la operación.
 export async function getDocuments(): Promise<{ id: string; name: string; created_at?: string }[]> {
   const url = `${API_BASE_URL}/api/v1/documents`;
   try {
@@ -241,6 +280,9 @@ export async function getDocuments(): Promise<{ id: string; name: string; create
   }
 }
 
+// Objetivo: deleteDocument.
+// Entradas: documentId: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export async function deleteDocument(documentId: string): Promise<void> {
   const url = `${API_BASE_URL}/api/v1/documents/${documentId}`;
   logApiRequest("DELETE", url);
@@ -263,6 +305,9 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
+// Objetivo: getFullImageUrl.
+// Entradas: relativeUrl: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export function getFullImageUrl(relativeUrl: string): string {
   if (!relativeUrl) return "";
   if (relativeUrl.startsWith("http")) return relativeUrl;

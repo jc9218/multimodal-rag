@@ -5,6 +5,9 @@ import { Layers, Link as LinkIcon, X, Plus, Clock, FileText, BookOpen, Trash2 } 
 import { IndexedDoc } from "@/types/chat";
 import { formatProcessedDate } from "@/lib/formatters";
 
+// Clase: contrato de datos ChatDocumentsProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatDocumentsProps {
   activeChatTitle: string;
   activeChatId: string;

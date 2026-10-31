@@ -8,13 +8,22 @@ from src.ports.vector_store_port import VectorStorePort
 logger = logging.getLogger(__name__)
 
 
+# Clase: QueryRAGUseCase.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class QueryRAGUseCase:
+    # Objetivo: Init.
+    # Entradas: self, vector_store, llm.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(self, vector_store: VectorStorePort, llm: LLMPort):
         self.vector_store = vector_store
         self.llm = llm
         self._query_embedding_cache: OrderedDict[str, List[float]] = OrderedDict()
         self._query_embedding_cache_size = 256
 
+    # Objetivo: Get query embedding.
+    # Entradas: self, query.
+    # Salida: List[float].
     def _get_query_embedding(self, query: str) -> List[float]:
         cache_key = " ".join(query.lower().split())
         cached = self._query_embedding_cache.get(cache_key)
@@ -29,6 +38,9 @@ class QueryRAGUseCase:
             self._query_embedding_cache.popitem(last=False)
         return embedding
 
+    # Objetivo: Execute.
+    # Entradas: self, query, top_k, document_id, document_ids, chat_history.
+    # Salida: QueryResponse.
     def execute(
         self,
         query: str,

@@ -3,6 +3,9 @@ from typing import Callable, List, Optional
 from src.domain.models import Chunk, ExtractedImage, RetrievedChunk
 
 
+# Clase: VectorStorePort.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class VectorStorePort(ABC):
     @abstractmethod
     def initialize(self) -> None:

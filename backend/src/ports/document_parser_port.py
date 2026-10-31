@@ -3,6 +3,9 @@ from typing import Callable, List, Optional, Tuple
 from src.domain.models import Chunk, ExtractedImage
 
 
+# Clase: DocumentParserPort.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class DocumentParserPort(ABC):
     @abstractmethod
     def parse_pdf(

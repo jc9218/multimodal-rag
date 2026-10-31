@@ -35,7 +35,13 @@ REGLAS DE SEGURIDAD Y BLINDAJE DEFENSIVO (MÁXIMA PRIORIDAD):
 """
 
 
+# Clase: OpenAIAdapter.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class OpenAIAdapter(LLMPort):
+    # Objetivo: Init.
+    # Entradas: self, api_key, model, embedding_model, embedding_dim, max_context_chars, max_history_chars, max_output_tokens.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(
         self,
         api_key: str = "",
@@ -55,6 +61,9 @@ class OpenAIAdapter(LLMPort):
         self.max_output_tokens = max_output_tokens
         self.client = OpenAI(api_key=api_key) if api_key else None
 
+    # Objetivo: Call embeddings api.
+    # Entradas: self, texts.
+    # Salida: List[List[float]].
     @retry(
         retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
         wait=wait_random_exponential(multiplier=1, min=1, max=10),
@@ -75,6 +84,9 @@ class OpenAIAdapter(LLMPort):
             logger.error(f"Error in OpenAI embeddings API: {e}")
             raise LLMServiceError(f"Embeddings generation failed: {e}") from e
 
+    # Objetivo: Generate embeddings.
+    # Entradas: self, texts.
+    # Salida: List[List[float]].
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
@@ -94,10 +106,16 @@ class OpenAIAdapter(LLMPort):
                 raise LLMServiceError(f"Embeddings generation failed: {e}") from e
             raise
 
+    # Objetivo: Generate query embedding.
+    # Entradas: self, query.
+    # Salida: List[float].
     def generate_query_embedding(self, query: str) -> List[float]:
         res = self._call_embeddings_api([query])
         return res[0]
 
+    # Objetivo: Call chat completion.
+    # Entradas: self, user_prompt.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     @retry(
         retry=retry_if_exception_type((RateLimitError, APIConnectionError, APITimeoutError)),
         wait=wait_random_exponential(multiplier=1, min=1, max=10),
@@ -115,6 +133,9 @@ class OpenAIAdapter(LLMPort):
             max_tokens=self.max_output_tokens,
         )
 
+    # Objetivo: Check is defensive.
+    # Entradas: self, answer.
+    # Salida: bool.
     def _check_is_defensive(self, answer: str) -> bool:
         low = answer.lower()
         phrases = [
@@ -127,6 +148,9 @@ class OpenAIAdapter(LLMPort):
         ]
         return any(p in low for p in phrases) or ("documentación proporcionada" in low and "suficiente" in low)
 
+    # Objetivo: Generate defensive answer.
+    # Entradas: self, query, context_chunks, chat_history.
+    # Salida: Tuple[str, bool].
     def generate_defensive_answer(
         self,
         query: str,

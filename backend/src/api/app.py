@@ -17,6 +17,9 @@ logging.basicConfig(
 logger = logging.getLogger("multimodal-rag")
 
 
+# Objetivo: Recover interrupted jobs.
+# Entradas: Ninguna..
+# Salida: None.
 def _recover_interrupted_jobs() -> None:
     from src.infrastructure.container import get_container
     from src.domain.models import JobStatusEnum
@@ -39,41 +42,51 @@ def _recover_interrupted_jobs() -> None:
         logger.exception("[startup] Could not list persisted ingestion jobs for recovery.")
         return
 
-    for job in jobs:
-        if job.status not in recoverable_statuses:
-            continue
-        file_path = app_container.storage.get_upload_path(job.document_id, job.filename)
-        if not file_path:
-            logger.error(
-                "[startup] Cannot recover job: upload is missing "
-                f"job_id={job.job_id} document_id={job.document_id} "
-                f"filename={job.filename!r} uploads_dir={app_container.storage.uploads_dir}"
+    def _run_sequential_recovery() -> None:
+        import time
+        time.sleep(3)  # Allow FastAPI to initialize and serve initial health probes
+        for job in jobs:
+            if job.status not in recoverable_statuses:
+                continue
+            file_path = app_container.storage.get_upload_path(job.document_id, job.filename)
+            if not file_path:
+                logger.error(
+                    "[startup] Cannot recover job: upload is missing "
+                    f"job_id={job.job_id} document_id={job.document_id} "
+                    f"filename={job.filename!r} uploads_dir={app_container.storage.uploads_dir}"
+                )
+                app_container.job_repo.update_job_status(
+                    job_id=job.job_id,
+                    status=JobStatusEnum.FAILED,
+                    progress=1.0,
+                    message="El procesamiento se interrumpió durante un despliegue y el archivo ya no está disponible.",
+                    error="Persisted upload missing during restart recovery.",
+                )
+                continue
+
+            logger.info(
+                "[startup] Recovering interrupted ingestion sequentially "
+                f"job_id={job.job_id} document_id={job.document_id}"
             )
-            app_container.job_repo.update_job_status(
-                job_id=job.job_id,
-                status=JobStatusEnum.FAILED,
-                progress=1.0,
-                message="El procesamiento se interrumpió durante un despliegue y el archivo ya no está disponible.",
-                error="Persisted upload missing during restart recovery.",
-            )
-            continue
+            try:
+                app_container.ingest_use_case.execute_async(
+                    job_id=job.job_id,
+                    file_path=file_path,
+                    document_id=job.document_id,
+                )
+            except Exception as e:
+                logger.error(f"[startup] Failed recovering job {job.job_id}: {e}")
 
-        logger.info(
-            "[startup] Recovering interrupted ingestion "
-            f"job_id={job.job_id} document_id={job.document_id}"
-        )
-        threading.Thread(
-            target=app_container.ingest_use_case.execute_async,
-            kwargs={
-                "job_id": job.job_id,
-                "file_path": file_path,
-                "document_id": job.document_id,
-            },
-            daemon=True,
-            name=f"recover-{job.job_id}",
-        ).start()
+    threading.Thread(
+        target=_run_sequential_recovery,
+        daemon=True,
+        name="job-recovery-worker",
+    ).start()
 
 
+# Objetivo: Lifespan.
+# Entradas: _.
+# Salida: Resultado de la operación o None si no retorna un valor..
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.RECOVER_INTERRUPTED_JOBS:
@@ -93,6 +106,9 @@ app = FastAPI(
 )
 
 # Global exception handler to log any unhandled error with full stack trace and location
+# Objetivo: Global exception handler.
+# Entradas: request, exc.
+# Salida: Resultado de la operación o None si no retorna un valor..
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(
@@ -120,6 +136,9 @@ app.include_router(documents_router)
 app.include_router(chat_router)
 
 
+# Objetivo: Health check.
+# Entradas: Ninguna..
+# Salida: Resultado de la operación o None si no retorna un valor..
 @app.get("/health", tags=["Health"])
 def health_check():
     return {

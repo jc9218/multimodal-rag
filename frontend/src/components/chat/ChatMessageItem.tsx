@@ -8,6 +8,9 @@ import { Message } from "@/types/chat";
 import MultimodalImagesView from "./MultimodalImagesView";
 import SourcesBadgeList from "./SourcesBadgeList";
 
+// Clase: contrato de datos ChatMessageItemProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatMessageItemProps {
   message: Message;
 }

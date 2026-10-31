@@ -2,11 +2,17 @@
  * Utility functions for text formatting, title cleaning, and dates.
  */
 
+// Objetivo: cleanDocumentTitle.
+// Entradas: filename: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export function cleanDocumentTitle(filename: string): string {
   // Deja el nombre del chat exactamente igual al nombre del archivo, sin modificar mayúsculas ni minúsculas
   return filename;
 }
 
+// Objetivo: formatProcessedDate.
+// Entradas: dateStr?: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 export function formatProcessedDate(dateStr?: string): string {
   if (!dateStr) return "";
   try {

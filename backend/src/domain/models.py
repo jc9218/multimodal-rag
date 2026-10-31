@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+# Clase: JobStatusEnum.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class JobStatusEnum(str, Enum):
     PENDING = "PENDING"
     EXTRACTING = "EXTRACTING"
@@ -16,6 +19,9 @@ class JobStatusEnum(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+# Clase: BoundingBox.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class BoundingBox(BaseModel):
     page: int
     x0: float
@@ -23,14 +29,23 @@ class BoundingBox(BaseModel):
     x1: float
     y1: float
 
+    # Objetivo: Width.
+    # Entradas: self.
+    # Salida: float.
     @property
     def width(self) -> float:
         return max(0.0, self.x1 - self.x0)
 
+    # Objetivo: Height.
+    # Entradas: self.
+    # Salida: float.
     @property
     def height(self) -> float:
         return max(0.0, self.y1 - self.y0)
 
+    # Objetivo: Center.
+    # Entradas: self.
+    # Salida: tuple[float, float].
     @property
     def center(self) -> tuple[float, float]:
         return ((self.x0 + self.x1) / 2.0, (self.y0 + self.y1) / 2.0)
@@ -44,6 +59,9 @@ class BoundingBox(BaseModel):
         return ((c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2) ** 0.5
 
 
+# Clase: ExtractedImage.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class ExtractedImage(BaseModel):
     id: str
     document_id: str
@@ -57,6 +75,9 @@ class ExtractedImage(BaseModel):
     height_px: int = 0
 
 
+# Clase: Chunk.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class Chunk(BaseModel):
     id: str
     document_id: str
@@ -68,6 +89,9 @@ class Chunk(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+# Clase: Document.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class Document(BaseModel):
     id: str
     filename: str
@@ -77,6 +101,9 @@ class Document(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+# Clase: IngestionJob.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class IngestionJob(BaseModel):
     job_id: str
     document_id: str
@@ -89,6 +116,9 @@ class IngestionJob(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+# Clase: RetrievedChunk.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class RetrievedChunk(BaseModel):
     chunk_id: str
     document_id: str
@@ -100,6 +130,9 @@ class RetrievedChunk(BaseModel):
     associated_images: List[ExtractedImage] = Field(default_factory=list)
 
 
+# Clase: QueryResponse.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class QueryResponse(BaseModel):
     query: str
     answer: str

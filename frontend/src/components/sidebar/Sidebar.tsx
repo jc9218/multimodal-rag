@@ -6,6 +6,9 @@ import UploadModal from "../UploadModal";
 import ChatList from "./ChatList";
 import ChatDocuments from "./ChatDocuments";
 
+// Clase: contrato de datos SidebarProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface SidebarProps {
   chats: ChatSession[];
   activeChat: ChatSession;

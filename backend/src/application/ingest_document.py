@@ -5,6 +5,7 @@ import resource
 import threading
 import time
 from src.infrastructure.config import settings
+from src.infrastructure.memory import get_process_memory_mb, release_memory
 from src.domain.models import JobStatusEnum
 from src.ports.document_parser_port import DocumentParserPort
 from src.ports.job_repository_port import JobRepositoryPort
@@ -19,11 +20,16 @@ _INGESTION_SEMAPHORE = threading.Semaphore(1)
 
 def _process_memory_mb() -> int:
     """Return the worker's peak resident memory when the platform exposes it."""
-    usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return int(usage / 1024) if usage > 1024 else int(usage)
+    return get_process_memory_mb()
 
 
+# Clase: IngestDocumentUseCase.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class IngestDocumentUseCase:
+    # Objetivo: Init.
+    # Entradas: self, parser, vector_store, llm, job_repo.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(
         self,
         parser: DocumentParserPort,
@@ -58,6 +64,9 @@ class IngestDocumentUseCase:
                 document_id,
             )
 
+    # Objetivo: Cleanup local cache.
+    # Entradas: self, document_id.
+    # Salida: None.
     def _cleanup_local_cache(self, document_id: str) -> None:
         cleanup = getattr(self.parser.storage, "cleanup_local_cache", None)
         if cleanup:
@@ -69,6 +78,9 @@ class IngestDocumentUseCase:
                     document_id,
                 )
 
+    # Objetivo: Cancel and cleanup.
+    # Entradas: self, job_id, document_id.
+    # Salida: bool.
     def _cancel_and_cleanup(self, job_id: str, document_id: str) -> bool:
         if not self._is_cancelled(job_id):
             return False
@@ -162,6 +174,9 @@ class IngestDocumentUseCase:
                 )
 
                 # Step 1: Multimodal Extraction and Spatial Correlation
+                # Objetivo: Report extraction progress.
+                # Entradas: fraction, detail.
+                # Salida: None.
                 def report_extraction_progress(fraction: float, detail: str) -> None:
                     progress = 0.05 + 0.25 * max(0.0, min(1.0, fraction))
                     self.job_repo.update_job_status(
@@ -180,6 +195,9 @@ class IngestDocumentUseCase:
                     else None
                 )
 
+                # Objetivo: Index page.
+                # Entradas: page_num, total_pages, page_chunks, page_images.
+                # Salida: None.
                 def index_page(
                     page_num: int,
                     total_pages: int,
@@ -201,6 +219,7 @@ class IngestDocumentUseCase:
                             chunk.embedding = embedding
                     indexed = self.vector_store.index_chunks(page_chunks)
                     incremental_state["indexed"] += indexed
+                    release_memory()
                     self.job_repo.update_job_status(
                         job_id=job_id,
                         status=JobStatusEnum.INDEXING,
@@ -227,6 +246,24 @@ class IngestDocumentUseCase:
                 if self._is_cancelled(job_id):
                     logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} was cancelled after extraction.")
                     self._cleanup_failed_ingestion(document_id)
+                    return
+
+                if incremental_state["called"]:
+                    del chunks
+                    del images
+                    release_memory()
+                    msg = (
+                        f"¡Documento listo! {incremental_state['indexed']} fragmentos preparados para consulta."
+                        if incremental_state["indexed"] > 0
+                        else "Documento procesado (no se detectó texto para indexar)."
+                    )
+                    self.job_repo.update_job_status(
+                        job_id=job_id,
+                        status=JobStatusEnum.COMPLETED,
+                        progress=1.0,
+                        message=msg,
+                    )
+                    self._cleanup_local_cache(document_id)
                     return
 
                 if not chunks:
@@ -266,22 +303,6 @@ class IngestDocumentUseCase:
                     progress=0.35,
                     message=f"Imágenes registradas ({len(images)}). Preparando embeddings...",
                 )
-
-                if incremental_state["called"]:
-                    del chunks
-                    del images
-                    gc.collect()
-                    self.job_repo.update_job_status(
-                        job_id=job_id,
-                        status=JobStatusEnum.COMPLETED,
-                        progress=1.0,
-                        message=(
-                            f"¡Documento listo! {incremental_state['indexed']} "
-                            "fragmentos preparados para consulta."
-                        ),
-                    )
-                    self._cleanup_local_cache(document_id)
-                    return
 
                 # Step 2: Dense Embeddings Generation (Batched with quota recovery & direct assignment)
                 total_chunks = len(chunks)
@@ -337,6 +358,7 @@ class IngestDocumentUseCase:
                         message=f"Generando embeddings ({processed} de {total_chunks} fragmentos · {pct}%)...",
                     )
                     time.sleep(0.15)  # Pace batch requests smoothly
+                    release_memory()
 
                 logger.info(
                     "[IngestDocumentUseCase:execute_async] embeddings_complete "
@@ -351,6 +373,9 @@ class IngestDocumentUseCase:
                     return
 
                 # Step 3: Indexing in Vector Store (Qdrant + BM25)
+                # Objetivo: Report indexing progress.
+                # Entradas: fraction, detail.
+                # Salida: None.
                 def report_indexing_progress(fraction: float, detail: str) -> None:
                     progress = 0.70 + 0.28 * max(0.0, min(1.0, fraction))
                     self.job_repo.update_job_status(
@@ -376,7 +401,7 @@ class IngestDocumentUseCase:
                 # Free chunks and images from worker scope and force GC
                 del chunks
                 del images
-                gc.collect()
+                release_memory()
 
                 # Step 4: Completion
                 self.job_repo.update_job_status(

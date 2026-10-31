@@ -35,12 +35,18 @@ REGLAS DE SEGURIDAD Y BLINDAJE DEFENSIVO (MÁXIMA PRIORIDAD):
 """
 
 
+# Clase: OllamaAdapter.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class OllamaAdapter(LLMPort):
     """
     Adapter for local LLMs and embeddings running on Ollama.
     Communicates directly with the local Ollama REST daemon.
     """
 
+    # Objetivo: Init.
+    # Entradas: self, base_url, model, embedding_model, embedding_dim, timeout, max_context_chars, max_history_chars, max_output_tokens.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
@@ -61,6 +67,9 @@ class OllamaAdapter(LLMPort):
         self.max_history_chars = max_history_chars
         self.max_output_tokens = max_output_tokens
 
+    # Objetivo: Call ollama embeddings.
+    # Entradas: self, text.
+    # Salida: List[float].
     @retry(
         retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError)),
         wait=wait_random_exponential(multiplier=1, min=1, max=8),
@@ -110,6 +119,9 @@ class OllamaAdapter(LLMPort):
             results.append(self._call_ollama_embeddings(t))
         return results
 
+    # Objetivo: Generate embeddings.
+    # Entradas: self, texts.
+    # Salida: List[List[float]].
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
@@ -123,9 +135,15 @@ class OllamaAdapter(LLMPort):
                 raise LLMServiceError(f"Ollama embeddings failed: {e}") from e
             raise
 
+    # Objetivo: Generate query embedding.
+    # Entradas: self, query.
+    # Salida: List[float].
     def generate_query_embedding(self, query: str) -> List[float]:
         return self._call_ollama_embeddings(query)
 
+    # Objetivo: Call ollama chat.
+    # Entradas: self, payload.
+    # Salida: str.
     @retry(
         retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError)),
         wait=wait_random_exponential(multiplier=1, min=1, max=8),
@@ -141,6 +159,9 @@ class OllamaAdapter(LLMPort):
             logger.error(f"Ollama chat returned HTTP {res.status_code}: {res.text}")
             raise LLMServiceError(f"Ollama chat API returned HTTP {res.status_code}: {res.text}")
 
+    # Objetivo: Check is defensive.
+    # Entradas: self, answer.
+    # Salida: bool.
     def _check_is_defensive(self, answer: str) -> bool:
         low = answer.lower()
         phrases = [
@@ -153,6 +174,9 @@ class OllamaAdapter(LLMPort):
         ]
         return any(p in low for p in phrases) or ("documentación proporcionada" in low and "suficiente" in low)
 
+    # Objetivo: Generate defensive answer.
+    # Entradas: self, query, context_chunks, chat_history.
+    # Salida: Tuple[str, bool].
     def generate_defensive_answer(
         self,
         query: str,

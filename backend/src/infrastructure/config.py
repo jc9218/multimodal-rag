@@ -3,6 +3,9 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Clase: Settings.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     PORT: int = 8000
@@ -26,16 +29,16 @@ class Settings(BaseSettings):
     LLM_MAX_HISTORY_CHARS: int = 2400
     LLM_MAX_OUTPUT_TOKENS: int = 512
     LLM_THINKING_BUDGET: int = 0
-    OCR_DPI: int = 120
+    OCR_DPI: int = 96
     MAX_EXTRACTED_IMAGE_MB: int = 2
     MAX_IMAGES_PER_DOCUMENT: int = 80
     # Free Render instances and low-quota models need a conservative upload
     # limit to avoid exhausting web-process memory during PDF parsing.
     RESOURCE_PROFILE: str = "free"
     MAX_UPLOAD_SIZE_MB: int = 10
-    EMBEDDING_BATCH_SIZE: int = 10
-    QDRANT_UPSERT_BATCH_SIZE: int = 10
-    BM25_MAX_CHUNKS_IN_MEMORY: int = 2000
+    EMBEDDING_BATCH_SIZE: int = 6
+    QDRANT_UPSERT_BATCH_SIZE: int = 6
+    BM25_MAX_CHUNKS_IN_MEMORY: int = 800
     RECOVER_INTERRUPTED_JOBS: bool = True
 
     # Storage & Cache (Auxiliary Services)
@@ -56,6 +59,9 @@ class Settings(BaseSettings):
         """Returns LLM_PROVIDER_API_KEY configured for the active LLM provider."""
         return self.LLM_PROVIDER_API_KEY
 
+    # Objetivo: Cors origins list.
+    # Entradas: self.
+    # Salida: List[str].
     @property
     def cors_origins_list(self) -> List[str]:
         raw = self.CORS_ORIGINS.strip()
@@ -70,6 +76,9 @@ class Settings(BaseSettings):
             return [raw]
         return ["*"]
 
+    # Objetivo: Max upload size bytes.
+    # Entradas: self.
+    # Salida: int.
     @property
     def max_upload_size_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

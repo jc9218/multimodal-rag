@@ -9,15 +9,27 @@ from src.infrastructure.config import settings
 MAX_UPLOAD_SIZE = settings.max_upload_size_bytes
 
 
+# Clase: UploadSizeExceededError.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class UploadSizeExceededError(ValueError):
     """Raised when a streamed upload exceeds the configured safety limit."""
 
 
+# Clase: StorageCapacityExceededError.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class StorageCapacityExceededError(ValueError):
     """Raised when local storage cannot safely accept another artifact."""
 
 
+# Clase: LocalStorageAdapter.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class LocalStorageAdapter(StoragePort):
+    # Objetivo: Init.
+    # Entradas: self, base_storage_path.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(self, base_storage_path: str = "./storage"):
         self.base_path = os.path.abspath(base_storage_path)
         self.uploads_dir = os.path.join(self.base_path, "uploads")
@@ -25,6 +37,9 @@ class LocalStorageAdapter(StoragePort):
         os.makedirs(self.uploads_dir, exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
 
+    # Objetivo: Ensure capacity.
+    # Entradas: self, additional_bytes.
+    # Salida: None.
     def _ensure_capacity(self, additional_bytes: int) -> None:
         usage = shutil.disk_usage(self.base_path)
         configured_limit = settings.MAX_LOCAL_STORAGE_MB * 1024 * 1024
@@ -44,6 +59,9 @@ class LocalStorageAdapter(StoragePort):
                 "Local storage capacity is insufficient for this artifact."
             )
 
+    # Objetivo: Save upload.
+    # Entradas: self, filename, content.
+    # Salida: str.
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
         safe_filename = os.path.basename(filename)
         dest_path = os.path.join(self.uploads_dir, safe_filename)
@@ -68,6 +86,9 @@ class LocalStorageAdapter(StoragePort):
             raise
         return dest_path
 
+    # Objetivo: Save image.
+    # Entradas: self, document_id, image_filename, image_bytes.
+    # Salida: str.
     def save_image(self, document_id: str, image_filename: str, image_bytes: bytes) -> str:
         safe_document_id = os.path.basename(document_id)
         safe_image_filename = re.sub(r"[^A-Za-z0-9._-]", "_", os.path.basename(image_filename))
@@ -81,6 +102,9 @@ class LocalStorageAdapter(StoragePort):
             f.write(image_bytes)
         return dest_path
 
+    # Objetivo: Get image path.
+    # Entradas: self, document_id, image_filename.
+    # Salida: Optional[str].
     def get_image_path(self, document_id: str, image_filename: str) -> Optional[str]:
         safe_document_id = os.path.basename(document_id)
         safe_image_filename = os.path.basename(image_filename)
@@ -92,6 +116,9 @@ class LocalStorageAdapter(StoragePort):
             return None
         return path if os.path.exists(path) else None
 
+    # Objetivo: Get upload path.
+    # Entradas: self, document_id, filename.
+    # Salida: Optional[str].
     def get_upload_path(self, document_id: str, filename: str) -> Optional[str]:
         safe_document_id = os.path.basename(document_id)
         safe_filename = os.path.basename(filename)
@@ -116,6 +143,9 @@ class LocalStorageAdapter(StoragePort):
                 return candidate
         return None
 
+    # Objetivo: Delete document files.
+    # Entradas: self, document_id.
+    # Salida: None.
     def delete_document_files(self, document_id: str) -> None:
         import shutil
 

@@ -3,6 +3,9 @@
 import React from "react";
 import { Cpu, Sparkles } from "lucide-react";
 
+// Clase: contrato de datos NavbarProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface NavbarProps {
   onOpenSkills: () => void;
 }

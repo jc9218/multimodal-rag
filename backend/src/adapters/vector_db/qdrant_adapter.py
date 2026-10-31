@@ -8,6 +8,7 @@ from qdrant_client.http import models as qmodels
 from rank_bm25 import BM25Okapi
 from src.domain.exceptions import VectorStoreError
 from src.domain.models import BoundingBox, Chunk, ExtractedImage, RetrievedChunk
+from src.infrastructure.memory import release_memory
 from src.ports.vector_store_port import VectorStorePort
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,9 @@ def _chunk_search_text(chunk: Chunk) -> str:
     return f"{document_name} {chunk.text}"
 
 
+# Objetivo: Is document identity query.
+# Entradas: query.
+# Salida: bool.
 def _is_document_identity_query(query: str) -> bool:
     tokens = set(_tokenize_bm25(query))
     return bool(
@@ -79,6 +83,9 @@ def _is_document_identity_query(query: str) -> bool:
     )
 
 
+# Objetivo: Is broad query.
+# Entradas: query.
+# Salida: bool.
 def _is_broad_query(query: str) -> bool:
     normalized = " ".join(query.lower().split())
     return any(
@@ -97,7 +104,13 @@ def _is_broad_query(query: str) -> bool:
     )
 
 
+# Clase: QdrantAdapter.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class QdrantAdapter(VectorStorePort):
+    # Objetivo: Init.
+    # Entradas: self, url, api_key, collection_name, vector_dim, upsert_batch_size, bm25_max_chunks.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(
         self,
         url: str = "http://localhost:6333",
@@ -197,6 +210,9 @@ class QdrantAdapter(VectorStorePort):
 
         return list(matched.values())
 
+    # Objetivo: Document scoped fallback.
+    # Entradas: self, top_k, document_id, document_ids.
+    # Salida: List[RetrievedChunk].
     def _document_scoped_fallback(
         self,
         top_k: int,
@@ -282,6 +298,9 @@ class QdrantAdapter(VectorStorePort):
             )
         return retrieved
 
+    # Objetivo: Initialize.
+    # Entradas: self.
+    # Salida: None.
     def initialize(self) -> None:
         if not self.client:
             return
@@ -424,9 +443,13 @@ class QdrantAdapter(VectorStorePort):
             if self._bm25_tokenized_corpus:
                 self._bm25_index = BM25Okapi(self._bm25_tokenized_corpus)
                 logger.info(f"[QdrantAdapter:_rehydrate_bm25_from_qdrant] Rehydrated BM25 index with {total_recovered} chunks from Qdrant.")
+            release_memory()
         except Exception as e:
             logger.warning(f"Could not rehydrate BM25 index from Qdrant: {e}")
 
+    # Objetivo: Index chunks.
+    # Entradas: self, chunks, progress_callback.
+    # Salida: int.
     def index_chunks(
         self,
         chunks: List[Chunk],
@@ -515,8 +538,12 @@ class QdrantAdapter(VectorStorePort):
                 logger.error(f"[QdrantAdapter:index_chunks] Error upserting points to Qdrant: {e}", exc_info=True)
                 raise VectorStoreError(f"Failed to index points in Qdrant: {e}") from e
 
+        release_memory()
         return len(chunks)
 
+    # Objetivo: Trim bm25 memory.
+    # Entradas: self.
+    # Salida: None.
     def _trim_bm25_memory(self) -> None:
         overflow = len(self._bm25_chunk_ids) - self.bm25_max_chunks
         if overflow <= 0:
@@ -527,6 +554,9 @@ class QdrantAdapter(VectorStorePort):
         for chunk_id in evicted_ids:
             self._corpus_chunks.pop(chunk_id, None)
 
+    # Objetivo: Upsert points batch.
+    # Entradas: self, points, processed, total, progress_callback.
+    # Salida: None.
     def _upsert_points_batch(
         self,
         points: List[qmodels.PointStruct],
@@ -598,6 +628,9 @@ class QdrantAdapter(VectorStorePort):
                         ]
                     )
 
+                # Objetivo: Execute qdrant query.
+                # Entradas: Ninguna..
+                # Salida: Resultado de la operación o None si no retorna un valor..
                 def _execute_qdrant_query():
                     if hasattr(self.client, "query_points"):
                         try:

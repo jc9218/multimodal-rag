@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { Image as ImageIcon, Maximize2, X } from "lucide-react";
 import { ExtractedImage, getFullImageUrl } from "@/lib/api";
 
+// Clase: contrato de datos MultimodalImagesViewProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface MultimodalImagesViewProps {
   images: ExtractedImage[];
 }

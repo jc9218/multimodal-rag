@@ -3,6 +3,9 @@ from typing import List, Optional, Tuple
 from src.domain.models import RetrievedChunk
 
 
+# Clase: LLMPort.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class LLMPort(ABC):
     @abstractmethod
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:

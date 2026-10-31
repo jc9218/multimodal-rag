@@ -8,6 +8,9 @@ const MAX_UPLOAD_SIZE_MB = Number(
 );
 const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
+// Clase: contrato de datos FileDropzoneProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface FileDropzoneProps {
   uploading: boolean;
   onFilesSelected: (files: File[]) => void;
@@ -21,6 +24,9 @@ export default function FileDropzone({
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
 
+  // Objetivo: validateAndFilterFiles.
+  // Entradas: fileList: FileList | null.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const validateAndFilterFiles = (fileList: FileList | null): File[] => {
     if (!fileList || fileList.length === 0) return [];
     const files = Array.from(fileList);
@@ -50,6 +56,9 @@ export default function FileDropzone({
     return validPdfs;
   };
 
+  // Objetivo: handleFileChange.
+  // Entradas: e: React.ChangeEvent<HTMLInputElement>.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valid = validateAndFilterFiles(e.target.files);
     if (valid.length > 0) {
@@ -58,16 +67,25 @@ export default function FileDropzone({
     e.target.value = "";
   };
 
+  // Objetivo: handleDragOver.
+  // Entradas: e: React.DragEvent<HTMLLabelElement>.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     if (!uploading) setIsDragging(true);
   };
 
+  // Objetivo: handleDragLeave.
+  // Entradas: e: React.DragEvent<HTMLLabelElement>.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
+  // Objetivo: handleDrop.
+  // Entradas: e: React.DragEvent<HTMLLabelElement>.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);

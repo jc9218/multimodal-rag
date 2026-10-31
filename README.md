@@ -136,7 +136,12 @@ flowchart TD
 ## 📑 Decisiones Técnicas de Diseño
 
 * **Streaming Asíncrono de Carga a Disco:** El endpoint `/api/v1/documents/upload` implementa `while chunk := await file.read(64 * 1024):` de forma totalmente asíncrona. Esto evita el bloqueo del hilo de eventos (*event loop*) de Starlette/FastAPI, asegurando que las transferencias sobre redes remotas o proxies reversos (como Render) no queden congeladas esperando paquetes TCP adicionales.
-* **Procesamiento en Cola con Semáforo:** La aplicación utiliza una cola de ingesta en el frontend combinada con un semáforo de concurrencia en backend (`_INGESTION_SEMAPHORE = 1`). Esto asegura que incluso al subir múltiples archivos grandes de una vez, el uso de memoria RAM permanezca dentro del límite de 512 MB de la capa gratuita de Render.
+* **Procesamiento en Cola con Semáforo y Protocolo Anti-OOM (512 MB):** La aplicación combina una cola de ingesta en el frontend con un semáforo de concurrencia en backend (`_INGESTION_SEMAPHORE = 1`). Para garantizar estabilidad estricta en el límite de 512 MB de Render:
+  1. Se configura `MALLOC_ARENA_MAX=2` en el contenedor Docker para evitar la fragmentación de arenas de glibc en cgroups de Linux.
+  2. Tras cada página procesada, lote de embeddings y upsert vectorial se ejecuta `release_memory()` (recolección forzada de basura + `ctypes.CDLL('libc.so.6').malloc_trim(0)` para devolver páginas de memoria al sistema operativo).
+  3. Uvicorn corre forzado con un único worker (`--workers 1`).
+  4. Los fallbacks de OCR y capturas de páginas escaneadas se rasterizan en escala de grises (`colorspace=fitz.csGRAY`, `alpha=False`) a 96 DPI, reduciendo el consumo de memoria del pixmap en un 75%.
+  5. La recuperación de trabajos interrumpidos en reinicio se ejecuta en serie (no en paralelo) tras un delay de inicialización.
 * **Tolerancia a Cold Starts en la Nube:** Debido a que las instancias libres de Render hibernan tras 15 minutos de inactividad, los timeouts de la API del cliente web se fijaron en 120 segundos y el sondeo de estado de jobs soporta hasta 50 reintentos (~60 segundos), acompañados de mensajes descriptivos en la interfaz para informar al usuario mientras la instancia despierta.
 * **Recuperación ante Despliegues:** Los trabajos de ingesta se persisten en Redis y los PDFs en `STORAGE_PATH`. Al iniciar una nueva instancia, los jobs no terminales se recuperan automáticamente y se vuelven a procesar desde el archivo persistido. En Render se requiere Redis administrado y un disco persistente montado para el backend; sin ambos, una instancia nueva no puede garantizar la continuidad.
 * **Arquitectura Hexagonal Desacoplada:** El transporte HTTP, la lógica de negocio y los servicios externos (LLM, base de datos vectorial, almacenamiento) están completamente aislados mediante interfaces abstractas (`LLMPort`, `VectorStorePort`, `StoragePort`, `DocumentParserPort`). Esto permite alternar entre Gemini, OpenAI o modelos locales en Ollama sin modificar ningún caso de uso.
@@ -346,10 +351,10 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * En Render Free, usa almacenamiento externo para que los PDF sobrevivan a reinicios: configura `STORAGE_PROVIDER=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `SUPABASE_STORAGE_BUCKET`. Crea previamente el bucket privado `documents` en Supabase Storage. Nunca expongas `SUPABASE_SERVICE_ROLE_KEY` al frontend.
    * La limpieza es en cascada: al cancelar, borrar o fallar una carga se eliminan los vectores parciales de Qdrant, el PDF local/remoto, las imágenes extraídas locales/remotas y los archivos temporales. Si falla la creación del job después de guardar el PDF, el endpoint intenta eliminar inmediatamente todos esos artefactos.
    * En Render Free, el límite local se mantiene por debajo de los 512 MB: `MAX_LOCAL_STORAGE_MB=400` y `MIN_FREE_STORAGE_MB=64`. Con Supabase activo, el PDF y las imágenes se conservan remotamente y las copias temporales locales se eliminan al terminar la ingesta.
-   * Para proteger la RAM de 512 MB, `MAX_EXTRACTED_IMAGE_MB=2` omite imágenes embebidas sobredimensionadas y `MAX_IMAGES_PER_DOCUMENT=80` limita la cantidad de imágenes conservadas por PDF. `OCR_DPI=120` se mantiene bajo para evitar picos al renderizar páginas escaneadas.
+   * Para proteger la RAM de 512 MB, `MAX_EXTRACTED_IMAGE_MB=2` omite imágenes embebidas sobredimensionadas y `MAX_IMAGES_PER_DOCUMENT=80` limita la cantidad de imágenes conservadas por PDF. `OCR_DPI=96` rasteriza páginas escaneadas en escala de grises para recortar un 75% el uso de memoria de pixmaps MuPDF.
    * La ingesta guarda cada página en Qdrant al terminarla. Si Render reinicia el proceso, Redis conserva el job y la reanudación vuelve a procesar de forma idempotente las páginas ya guardadas, sin duplicar vectores; el progreso confirmado no depende de que la extracción completa llegue al final.
    * Si aparece `Cannot recover job: upload is missing`, Redis conservó el estado del job pero el PDF no existe en `STORAGE_PATH/uploads`. Verifica el disco persistente, el `mount path` y que `STORAGE_PATH` apunte a ese montaje; ese archivo debe volver a subirse si ya fue eliminado por un despliegue anterior.
-   * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes pequeños (`EMBEDDING_BATCH_SIZE`, `QDRANT_UPSERT_BATCH_SIZE`) y BM25 mantiene un límite configurable (`BM25_MAX_CHUNKS_IN_MEMORY`). Los datos completos permanecen en Qdrant.
+   * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes pequeños (`EMBEDDING_BATCH_SIZE=6`, `QDRANT_UPSERT_BATCH_SIZE=6`) y BM25 mantiene un límite en memoria de `BM25_MAX_CHUNKS_IN_MEMORY=800`. Los datos completos permanecen en Qdrant.
    * La búsqueda léxica también indexa el nombre del documento. Las consultas sobre marca, fabricante, modelo, nombre o resumen activan una muestra document-scoped para no depender únicamente de la similitud vectorial.
 
 3. **Frontend (Vercel):**
@@ -366,11 +371,13 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
 make test
 ```
 
-### Cobertura de las Pruebas (30 tests):
+### Cobertura de las Pruebas (42 tests):
 * `test_security.py`: Verificación de defensas contra Prompt Injection, neutralización de etiquetas XML y validación de límites de entrada.
 * `test_bounding_boxes.py`: Validación de coordenadas geométricas, intersecciones y cálculo de distancia euclidiana espacial.
 * `test_upload_storage.py`: Verificación de streaming binario de subida y eliminación segura en caso de exceso de tamaño.
-* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, OCR fallback e imágenes recuperadas.
+* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, checkpoints por página, OCR fallback e imágenes recuperadas.
+* `test_memory_efficiency.py`: Validación de recolección de basura, llamada segura a `malloc_trim(0)` e ingesta incremental con streaming de páginas.
+* `test_qdrant_images.py`: Pruebas de hidratación de imágenes extraídas, tokenización de nombres de documento y consultas de identidad.
 * `test_resilience.py`: Validación de reintentos exponenciales (*Exponential Backoff*), respuestas defensivas y omisión de presupuestos de pensamiento innecesarios.
 * `test_prompt_budget.py`: Comprobación de límites y presupuestos de caracteres de contexto e historial.
 * `test_factory.py`: Verificación del intercambio dinámico de proveedores de LLM (`LLMFactory`).

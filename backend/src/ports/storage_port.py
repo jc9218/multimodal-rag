@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from typing import BinaryIO, Optional, Union
 
 
+# Clase: StoragePort.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class StoragePort(ABC):
     @abstractmethod
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
@@ -13,6 +16,9 @@ class StoragePort(ABC):
         """Saves an extracted image and returns its relative or absolute path."""
         pass
 
+    # Objetivo: Get image path.
+    # Entradas: self, document_id, image_filename.
+    # Salida: Optional[str].
     @abstractmethod
     def get_image_path(self, document_id: str, image_filename: str) -> Optional[str]:
         pass

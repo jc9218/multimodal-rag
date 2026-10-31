@@ -9,6 +9,9 @@ from src.ports.job_repository_port import JobRepositoryPort
 logger = logging.getLogger(__name__)
 
 
+# Clase: RedisJobRepository.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class RedisJobRepository(JobRepositoryPort):
     """
     Persistent Job Repository backed by Redis.
@@ -16,6 +19,9 @@ class RedisJobRepository(JobRepositoryPort):
     Falls back to in-memory dictionary if Redis is unreachable (e.g. in standalone unit tests).
     """
 
+    # Objetivo: Init.
+    # Entradas: self, redis_url, ttl_seconds.
+    # Salida: Resultado de la operación o None si no retorna un valor..
     def __init__(self, redis_url: str = "redis://localhost:6379/0", ttl_seconds: int = 86400):
         self.redis_url = redis_url
         self.ttl_seconds = ttl_seconds
@@ -33,13 +39,22 @@ class RedisJobRepository(JobRepositoryPort):
             )
             self._redis_client = None
 
+    # Objetivo: Job key.
+    # Entradas: self, job_id.
+    # Salida: str.
     def _job_key(self, job_id: str) -> str:
         return f"multimodal_rag:job:{job_id}"
 
+    # Objetivo: Is persistent.
+    # Entradas: self.
+    # Salida: bool.
     @property
     def is_persistent(self) -> bool:
         return self._redis_client is not None
 
+    # Objetivo: Create job.
+    # Entradas: self, document_id, filename.
+    # Salida: IngestionJob.
     def create_job(self, document_id: str, filename: str) -> IngestionJob:
         import uuid
         job_id = f"job_{uuid.uuid4().hex[:12]}"
@@ -63,6 +78,9 @@ class RedisJobRepository(JobRepositoryPort):
         self._memory_fallback[job_id] = job
         return job
 
+    # Objetivo: Get job.
+    # Entradas: self, job_id.
+    # Salida: IngestionJob.
     def get_job(self, job_id: str) -> IngestionJob:
         if self._redis_client:
             try:
@@ -77,6 +95,9 @@ class RedisJobRepository(JobRepositoryPort):
 
         raise JobNotFoundError(f"Job '{job_id}' not found.")
 
+    # Objetivo: Update job status.
+    # Entradas: self, job_id, status, progress, message, error.
+    # Salida: IngestionJob.
     def update_job_status(
         self,
         job_id: str,
@@ -105,6 +126,9 @@ class RedisJobRepository(JobRepositoryPort):
         self._memory_fallback[job_id] = job
         return job
 
+    # Objetivo: List jobs.
+    # Entradas: self.
+    # Salida: List[IngestionJob].
     def list_jobs(self) -> List[IngestionJob]:
         jobs = []
         if self._redis_client:

@@ -7,6 +7,9 @@ from src.ports.vector_store_port import VectorStorePort
 logger = logging.getLogger(__name__)
 
 
+# Clase: VectorStoreFactory.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
 class VectorStoreFactory:
     """
     Factory for dynamically creating VectorStorePort implementations.
@@ -17,11 +20,17 @@ class VectorStoreFactory:
         "qdrant": QdrantAdapter,
     }
 
+    # Objetivo: Register provider.
+    # Entradas: cls, name, adapter_cls.
+    # Salida: None.
     @classmethod
     def register_provider(cls, name: str, adapter_cls: Type[VectorStorePort]) -> None:
         cls._registry[name.lower()] = adapter_cls
         logger.info(f"Registered custom VectorStore provider: {name}")
 
+    # Objetivo: Create.
+    # Entradas: cls, settings.
+    # Salida: VectorStorePort.
     @classmethod
     def create(cls, settings: Settings) -> VectorStorePort:
         provider = settings.VECTOR_STORE_PROVIDER.lower().strip()

@@ -7,6 +7,9 @@ import ChatHeader from "./chat/ChatHeader";
 import ChatMessageList from "./chat/ChatMessageList";
 import ChatInput from "./chat/ChatInput";
 
+// Clase: contrato de datos ChatInterfaceProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatInterfaceProps {
   chat: ChatSession;
   allIndexedDocs: IndexedDoc[];
@@ -29,6 +32,9 @@ export default function ChatInterface({
 
   const hasAttachedDocs = Boolean(chat.documentIds && chat.documentIds.length > 0);
 
+  // Objetivo: handleSendMessage.
+  // Entradas: userQuery: string.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleSendMessage = async (userQuery: string) => {
     if (!hasAttachedDocs || loading) return;
 

@@ -1,5 +1,8 @@
 import { QueryResponse } from "@/lib/api";
 
+// Clase: contrato de datos Message.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface Message {
   id: string;
   sender: "user" | "assistant";
@@ -8,6 +11,9 @@ export interface Message {
   isError?: boolean;
 }
 
+// Clase: contrato de datos ChatSession.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface ChatSession {
   id: string;
   title: string;
@@ -18,6 +24,9 @@ export interface ChatSession {
   isCustomTitle?: boolean;
 }
 
+// Clase: contrato de datos IndexedDoc.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 export interface IndexedDoc {
   id: string;
   name: string;

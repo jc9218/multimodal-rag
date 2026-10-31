@@ -3,6 +3,9 @@
 import React, { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 
+// Clase: contrato de datos ChatInputProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatInputProps {
   chatTitle: string;
   hasAttachedDocs: boolean;
@@ -18,6 +21,9 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [input, setInput] = useState("");
 
+  // Objetivo: handleSubmit.
+  // Entradas: e: React.FormEvent.
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();

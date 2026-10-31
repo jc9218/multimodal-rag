@@ -4,6 +4,9 @@ import React from "react";
 import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { ChatSession } from "@/types/chat";
 
+// Clase: contrato de datos ChatListProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface ChatListProps {
   chats: ChatSession[];
   activeChatId: string;

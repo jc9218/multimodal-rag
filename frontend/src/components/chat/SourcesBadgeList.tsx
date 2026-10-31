@@ -4,6 +4,9 @@ import React from "react";
 import { BookOpen } from "lucide-react";
 import { RetrievedChunk } from "@/lib/api";
 
+// Clase: contrato de datos SourcesBadgeListProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface SourcesBadgeListProps {
   sources?: RetrievedChunk[];
 }

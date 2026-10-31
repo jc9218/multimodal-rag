@@ -6,6 +6,9 @@ import { uploadDocument, getJobStatus, cancelJob, IngestionJob } from "@/lib/api
 import FileDropzone from "./upload/FileDropzone";
 import IngestionProgressCard from "./upload/IngestionProgressCard";
 
+// Clase: contrato de datos UploadModalProps.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface UploadModalProps {
   onDocumentIndexed: (
     docId: string,
@@ -19,6 +22,9 @@ interface UploadModalProps {
 
 const ACTIVE_INGESTION_JOB_KEY = "multimodal_rag_active_ingestion_job_v1";
 
+// Clase: contrato de datos PersistedJob.
+// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
+// Salida: estructura tipada consumida por la interfaz correspondiente.
 interface PersistedJob {
   jobId: string;
   filename: string;
@@ -26,6 +32,9 @@ interface PersistedJob {
   savedAt: number;
 }
 
+// Objetivo: persistActiveJob.
+// Entradas: jobId: string, filename: string, targetChatId?: string.
+// Salida: valor indicado por la firma o efecto de la operación.
 function persistActiveJob(jobId: string, filename: string, targetChatId?: string) {
   try {
     const data: PersistedJob = {
@@ -40,6 +49,9 @@ function persistActiveJob(jobId: string, filename: string, targetChatId?: string
   }
 }
 
+// Objetivo: clearPersistedJob.
+// Entradas: Ninguna..
+// Salida: valor indicado por la firma o efecto de la operación.
 function clearPersistedJob() {
   try {
     localStorage.removeItem(ACTIVE_INGESTION_JOB_KEY);
@@ -113,6 +125,9 @@ export default function UploadModal({
     }
   }, []);
 
+  // Objetivo: handleCancelUpload.
+  // Entradas: Ninguna..
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleCancelUpload = async () => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -143,6 +158,9 @@ export default function UploadModal({
     }
   };
 
+  // Objetivo: processNextInQueue.
+  // Entradas: remainingQueue: File[].
+  // Salida: valor indicado por la firma o efecto de la operación.
   const processNextInQueue = async (remainingQueue: File[]) => {
     if (remainingQueue.length === 0) {
       setUploading(false);
@@ -154,6 +172,9 @@ export default function UploadModal({
     await startSingleUpload(nextFile, rest);
   };
 
+  // Objetivo: startSingleUpload.
+  // Entradas: targetFile: File, remainingFiles: File[] = [].
+  // Salida: valor indicado por la firma o efecto de la operación.
   const startSingleUpload = async (targetFile: File, remainingFiles: File[] = []) => {
     try {
       setUploading(true);
@@ -189,6 +210,9 @@ export default function UploadModal({
     }
   };
 
+  // Objetivo: handleFilesSelected.
+  // Entradas: files: File[].
+  // Salida: valor indicado por la firma o efecto de la operación.
   const handleFilesSelected = (files: File[]) => {
     if (files.length === 0) return;
     const [first, ...rest] = files;
@@ -208,6 +232,9 @@ export default function UploadModal({
 
     let consecutiveErrors = 0;
 
+    // Objetivo: checkStatus.
+    // Entradas: Ninguna..
+    // Salida: valor indicado por la firma o efecto de la operación.
     const checkStatus = async () => {
       try {
         const currentJob = await getJobStatus(jobId);

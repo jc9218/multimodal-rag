@@ -138,9 +138,15 @@ flowchart TD
 
 ### ⚡ 6. Resilience & Circuit Breaker Agent (`resilience-agent`)
 * **Purpose:** Guarantee service availability during network drops, load spikes, LLM rate limits, or cloud container sleep cycles.
-* **Code Components:** `tenacity` retry decorators in adapters, timeout controllers in frontend (`frontend/src/lib/api.ts`).
+* **Code Components:** `tenacity` retry decorators in adapters, timeout controllers in frontend (`frontend/src/lib/api.ts`), memory management (`backend/src/infrastructure/memory.py`).
 * **Retry and Resilience Policies:**
   * **Render Free-Tier Cold-Start Tolerance:** Extended client timeouts to **120 seconds** and up to **50 job polling attempts** (~60s) while the container wakes from hibernation.
+  * **512MB RAM Protection Protocol (Anti-OOM):**
+    1. Sets `MALLOC_ARENA_MAX=2` in `Dockerfile` to eliminate glibc heap fragmentation on Linux cgroups.
+    2. Proactive memory reclamation: calls `release_memory()` (`gc.collect()` + `malloc_trim(0)`) after every extracted page, embedding batch, and vector upsert.
+    3. Optimized PyMuPDF rendering: uses grayscale snapshots (`colorspace=fitz.csGRAY`, `alpha=False`) and conservative 96 DPI for OCR fallback, cutting bitmap RAM by 75%.
+    4. Serialized restart recovery: interrupted ingestion jobs are recovered one by one with startup delay, preventing burst memory spikes on reboot.
+    5. Single Uvicorn worker enforcement (`--workers 1`) to guarantee bounded container memory footprint.
   * Captures and retries transient errors: `RateLimitError` (HTTP 429), `APIConnectionError`, and `APITimeoutError`.
   * *Exponential Backoff with Jitter*:
     $$T_{\text{wait}} = \min(\text{max\_wait}, \text{multiplier} \cdot 2^{\text{attempt}})$$
@@ -163,12 +169,13 @@ flowchart TD
 
 ### 🧪 8. Testing & Quality Assurance Agent (`qa-test-agent`)
 * **Purpose:** Validate the complete unit test suite and ensure isolation through test doubles (Mocks).
-* **Code Components:** `backend/tests/unit/` (30 unit tests)
+* **Code Components:** `backend/tests/unit/` (42 unit tests)
 * **Evaluated Metrics:**
   * Zero live network calls during test execution.
   * Isolation of `LLMPort` and `VectorStorePort` via `unittest.mock.MagicMock`.
   * Verification of the Job state machine (`PENDING` $\to$ `COMPLETED`).
   * Context and history character budget validation (`test_prompt_budget.py`).
+  * Memory efficiency and cgroup trimming validation (`test_memory_efficiency.py`).
   * Prompt injection shielding and XML delimiter sanitization (`test_security.py`).
   * Asynchronous streaming and upload quota enforcement (`test_upload_storage.py`).
   * Automated execution via `make test`.
