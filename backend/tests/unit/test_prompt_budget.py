@@ -21,6 +21,12 @@ def test_format_context_respects_character_budget():
     assert "manual.pdf" in formatted
 
 
+def test_format_context_exposes_document_metadata_for_identity_queries():
+    formatted = format_context([_chunk("Manual de instalación y operación.")])
+
+    assert "Documento fuente: manual.pdf" in formatted
+
+
 def test_format_history_uses_recent_items_and_budget():
     history = [
         {"role": "user", "content": "old"},

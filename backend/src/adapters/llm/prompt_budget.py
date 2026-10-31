@@ -49,6 +49,7 @@ def format_context(
         )
         part = (
             f'  <chunk index="{index}" document="{chunk.document_name}" page="{chunk.page}">\n'
+            f"    Documento fuente: {chunk.document_name}\n"
             f"    {safe_text}\n"
             f"  </chunk>"
         )

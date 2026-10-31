@@ -58,7 +58,16 @@ class QueryRAGUseCase:
         search_query = query
         broad_document_query = any(
             phrase in query.lower()
-            for phrase in ("de qué habla", "sobre qué trata", "qué contiene", "resumen")
+            for phrase in (
+                "de qué habla",
+                "sobre qué trata",
+                "qué contiene",
+                "resumen",
+                "marca",
+                "fabricante",
+                "modelo",
+                "nombre del documento",
+            )
         )
         if chat_history and len(query.split()) < 6 and not broad_document_query:
             for item in reversed(chat_history):

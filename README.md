@@ -344,7 +344,8 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * Configura `REDIS_URL` con la URL de una instancia Redis administrada, no con `redis://redis:6379/0` fuera de Docker Compose.
    * Configura `STORAGE_PATH` sobre un disco persistente de Render. El endpoint `/ready` devuelve `503` en producción si Redis no está disponible, evitando aceptar cargas que no podrán recuperarse después de un redeploy.
    * Si aparece `Cannot recover job: upload is missing`, Redis conservó el estado del job pero el PDF no existe en `STORAGE_PATH/uploads`. Verifica el disco persistente, el `mount path` y que `STORAGE_PATH` apunte a ese montaje; ese archivo debe volver a subirse si ya fue eliminado por un despliegue anterior.
-   * Para evitar picos de memoria durante PDFs grandes, Qdrant recibe los vectores en lotes (`QDRANT_UPSERT_BATCH_SIZE`) y el índice BM25 mantiene un límite configurable (`BM25_MAX_CHUNKS_IN_MEMORY`). Los datos completos permanecen en Qdrant.
+   * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes pequeños (`EMBEDDING_BATCH_SIZE`, `QDRANT_UPSERT_BATCH_SIZE`) y BM25 mantiene un límite configurable (`BM25_MAX_CHUNKS_IN_MEMORY`). Los datos completos permanecen en Qdrant.
+   * La búsqueda léxica también indexa el nombre del documento. Las consultas sobre marca, fabricante, modelo, nombre o resumen activan una muestra document-scoped para no depender únicamente de la similitud vectorial.
 
 3. **Frontend (Vercel):**
    * Importar el repositorio en [vercel.com](https://vercel.com).

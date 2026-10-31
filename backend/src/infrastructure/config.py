@@ -28,9 +28,9 @@ class Settings(BaseSettings):
     LLM_THINKING_BUDGET: int = 0
     OCR_DPI: int = 120
     MAX_UPLOAD_SIZE_MB: int = 50
-    EMBEDDING_BATCH_SIZE: int = 50
-    QDRANT_UPSERT_BATCH_SIZE: int = 25
-    BM25_MAX_CHUNKS_IN_MEMORY: int = 5000
+    EMBEDDING_BATCH_SIZE: int = 10
+    QDRANT_UPSERT_BATCH_SIZE: int = 10
+    BM25_MAX_CHUNKS_IN_MEMORY: int = 2000
     RECOVER_INTERRUPTED_JOBS: bool = True
 
     # Storage & Cache (Auxiliary Services)

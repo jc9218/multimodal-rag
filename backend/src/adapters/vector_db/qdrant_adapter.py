@@ -13,9 +13,88 @@ from src.ports.vector_store_port import VectorStorePort
 logger = logging.getLogger(__name__)
 
 
+_BM25_STOPWORDS = {
+    "a",
+    "al",
+    "con",
+    "cual",
+    "cuál",
+    "cómo",
+    "como",
+    "de",
+    "del",
+    "el",
+    "en",
+    "es",
+    "habla",
+    "la",
+    "las",
+    "lo",
+    "los",
+    "me",
+    "para",
+    "por",
+    "qué",
+    "que",
+    "se",
+    "sobre",
+    "un",
+    "una",
+    "y",
+}
+
+
 def _tokenize_bm25(text: str) -> List[str]:
-    """Tokenize removing punctuation to isolate technical codes like 'M12'."""
-    return re.findall(r"\w+", text.lower())
+    """Tokenize technical terms while ignoring common question words."""
+    return [
+        token
+        for token in re.findall(r"[^\W_]+", text.lower())
+        if token not in _BM25_STOPWORDS
+    ]
+
+
+def _chunk_search_text(chunk: Chunk) -> str:
+    """Include stable document metadata so identity queries can retrieve the document."""
+    document_name = chunk.metadata.get("document_name", "")
+    return f"{document_name} {chunk.text}"
+
+
+def _is_document_identity_query(query: str) -> bool:
+    tokens = set(_tokenize_bm25(query))
+    return bool(
+        tokens
+        & {
+            "marca",
+            "fabricante",
+            "brand",
+            "manufacturer",
+            "modelo",
+            "model",
+            "documento",
+            "manual",
+            "nombre",
+            "título",
+            "titulo",
+        }
+    )
+
+
+def _is_broad_query(query: str) -> bool:
+    normalized = " ".join(query.lower().split())
+    return any(
+        phrase in normalized
+        for phrase in (
+            "de qué habla",
+            "de que habla",
+            "sobre qué trata",
+            "sobre que trata",
+            "qué contiene",
+            "que contiene",
+            "resumen",
+            "cuál es el tema",
+            "cual es el tema",
+        )
+    )
 
 
 class QdrantAdapter(VectorStorePort):
@@ -294,7 +373,7 @@ class QdrantAdapter(VectorStorePort):
         try:
             offset = None
             total_recovered = 0
-            while True:
+            while len(self._bm25_chunk_ids) < self.bm25_max_chunks:
                 scroll_res = self.client.scroll(
                     collection_name=self.collection_name,
                     limit=250,
@@ -332,7 +411,9 @@ class QdrantAdapter(VectorStorePort):
 
                         self._corpus_chunks[cid] = chunk
                         self._bm25_chunk_ids.append(cid)
-                        self._bm25_tokenized_corpus.append(_tokenize_bm25(text))
+                        self._bm25_tokenized_corpus.append(
+                            _tokenize_bm25(_chunk_search_text(chunk))
+                        )
                         self._trim_bm25_memory()
                         total_recovered += 1
 
@@ -361,7 +442,7 @@ class QdrantAdapter(VectorStorePort):
             c_mem.embedding = None
             self._corpus_chunks[c.id] = c_mem
             self._bm25_chunk_ids.append(c.id)
-            self._bm25_tokenized_corpus.append(_tokenize_bm25(c.text))
+            self._bm25_tokenized_corpus.append(_tokenize_bm25(_chunk_search_text(c)))
             self._trim_bm25_memory()
             if progress_callback and (index == total_chunks or index % 25 == 0):
                 progress_callback(
@@ -523,7 +604,7 @@ class QdrantAdapter(VectorStorePort):
                                 collection_name=self.collection_name,
                                 query=query_embedding,
                                 query_filter=search_filter,
-                                limit=top_k * 2,
+                                limit=top_k * 4,
                                 with_payload=True,
                             )
                             return getattr(query_res, "points", query_res) or []
@@ -534,7 +615,7 @@ class QdrantAdapter(VectorStorePort):
                             collection_name=self.collection_name,
                             query_vector=query_embedding,
                             query_filter=search_filter,
-                            limit=top_k * 2,
+                            limit=top_k * 4,
                             with_payload=True,
                         )
                     return []
@@ -559,23 +640,77 @@ class QdrantAdapter(VectorStorePort):
         if self._bm25_index and self._bm25_chunk_ids:
             query_tokens = _tokenize_bm25(query)
             bm25_scores = self._bm25_index.get_scores(query_tokens)
+            query_token_set = set(query_tokens)
             sorted_indices = sorted(
-                range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True
+                range(len(bm25_scores)),
+                key=lambda i: (
+                    bm25_scores[i],
+                    len(query_token_set.intersection(self._bm25_tokenized_corpus[i])),
+                ),
+                reverse=True,
             )
             sparse_rank = 1
             for idx in sorted_indices:
-                if bm25_scores[idx] > 0.0:
-                    cid = self._bm25_chunk_ids[idx]
-                    chunk = self._corpus_chunks.get(cid)
-                    if chunk:
-                        if document_ids is not None and chunk.document_id not in document_ids:
-                            continue
-                        if document_id and chunk.document_id != document_id:
-                            continue
-                    sparse_ranks[cid] = sparse_rank
-                    sparse_rank += 1
-                    if sparse_rank > top_k * 2:
-                        break
+                token_overlap = len(
+                    query_token_set.intersection(self._bm25_tokenized_corpus[idx])
+                )
+                if bm25_scores[idx] <= 0.0 and token_overlap == 0:
+                    continue
+                cid = self._bm25_chunk_ids[idx]
+                chunk = self._corpus_chunks.get(cid)
+                if chunk:
+                    if document_ids is not None and chunk.document_id not in document_ids:
+                        continue
+                    if document_id and chunk.document_id != document_id:
+                        continue
+                sparse_ranks[cid] = sparse_rank
+                sparse_rank += 1
+                if sparse_rank > top_k * 4:
+                    break
+
+        # Identity and broad questions need a document sample even when dense
+        # retrieval returns plausible but semantically unrelated chunks.
+        identity_query = _is_document_identity_query(query)
+        identity_fallback_ids: set[str] = set()
+        if self.client and (document_ids or document_id) and (
+            identity_query or _is_broad_query(query)
+        ):
+            try:
+                fallback_limit = max(top_k * 4, 12) if identity_query else top_k
+                fallback_chunks = self._document_scoped_fallback(
+                    fallback_limit, document_id, document_ids
+                )
+                fallback_chunks.sort(key=lambda chunk: (chunk.page, chunk.chunk_id))
+                next_rank = 1 if identity_query else max(dense_ranks.values(), default=0) + 1
+                for fallback_chunk in fallback_chunks:
+                    if fallback_chunk.chunk_id in dense_ranks or fallback_chunk.chunk_id in sparse_ranks:
+                        continue
+                    identity_fallback_ids.add(fallback_chunk.chunk_id)
+                    dense_ranks[fallback_chunk.chunk_id] = next_rank
+                    next_rank += 1
+                    qdrant_payloads[fallback_chunk.chunk_id] = {
+                        "chunk_id": fallback_chunk.chunk_id,
+                        "document_id": fallback_chunk.document_id,
+                        "document_name": fallback_chunk.document_name,
+                        "text": fallback_chunk.text,
+                        "page": fallback_chunk.page,
+                        "bbox": fallback_chunk.bbox.model_dump(),
+                        "associated_images": [
+                            image.model_dump() for image in fallback_chunk.associated_images
+                        ],
+                    }
+            except Exception as e:
+                logger.warning(
+                    "[QdrantAdapter:hybrid_search] Metadata fallback failed: %s",
+                    e,
+                )
+
+        if identity_fallback_ids:
+            fallback_rank_count = len(identity_fallback_ids)
+            dense_ranks = {
+                cid: rank if cid in identity_fallback_ids else rank + fallback_rank_count
+                for cid, rank in dense_ranks.items()
+            }
 
         # Broad questions can have no exact BM25 terms, and an unavailable or
         # stale dense index can return no candidates despite the document existing.
@@ -782,7 +917,7 @@ class QdrantAdapter(VectorStorePort):
         self._bm25_chunk_ids = []
         for c in self._corpus_chunks.values():
             self._bm25_chunk_ids.append(c.id)
-            self._bm25_tokenized_corpus.append(_tokenize_bm25(c.text))
+            self._bm25_tokenized_corpus.append(_tokenize_bm25(_chunk_search_text(c)))
 
         if self._bm25_tokenized_corpus:
             self._bm25_index = BM25Okapi(self._bm25_tokenized_corpus)
