@@ -1,0 +1,74 @@
+import json
+from typing import List, Optional
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    ENVIRONMENT: str = "development"
+    PORT: int = 8000
+    HOST: str = "0.0.0.0"
+
+    # Vector DB (Generic Provider: qdrant)
+    VECTOR_STORE_PROVIDER: str = "qdrant"
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: str = ""
+    QDRANT_COLLECTION_NAME: str = "technical_documents"
+
+    # LLM & Embeddings (Loaded strictly from .env / environment variables)
+    LLM_PROVIDER: str
+    LLM_PROVIDER_API_KEY: str = ""
+    LLM_BASE_URL: str = ""  # e.g. http://localhost:11434 for Ollama or custom local model
+
+    LLM_MODEL: str
+    EMBEDDING_MODEL: str
+    EMBEDDING_DIMENSION: int
+    LLM_MAX_CONTEXT_CHARS: int = 12000
+    LLM_MAX_HISTORY_CHARS: int = 2400
+    LLM_MAX_OUTPUT_TOKENS: int = 512
+    LLM_THINKING_BUDGET: int = 0
+    OCR_DPI: int = 120
+    MAX_UPLOAD_SIZE_MB: int = 50
+    EMBEDDING_BATCH_SIZE: int = 10
+    QDRANT_UPSERT_BATCH_SIZE: int = 10
+    BM25_MAX_CHUNKS_IN_MEMORY: int = 2000
+    MAX_EXTRACTED_IMAGE_MB: int = 8
+    RECOVER_INTERRUPTED_JOBS: bool = True
+
+    # Storage & Cache (Auxiliary Services)
+    STORAGE_PATH: str = "./storage"
+    REDIS_URL: str = "redis://redis:6379/0"
+
+    # CORS
+    CORS_ORIGINS: str = '["http://localhost:3000", "http://127.0.0.1:3000", "https://*.vercel.app"]'
+
+    @property
+    def api_key(self) -> str:
+        """Returns LLM_PROVIDER_API_KEY configured for the active LLM provider."""
+        return self.LLM_PROVIDER_API_KEY
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        raw = self.CORS_ORIGINS.strip()
+        if raw.startswith("["):
+            try:
+                return json.loads(raw)
+            except Exception:
+                pass
+        if "," in raw:
+            return [origin.strip() for origin in raw.split(",") if origin.strip()]
+        if raw:
+            return [raw]
+        return ["*"]
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+
+settings = Settings()
