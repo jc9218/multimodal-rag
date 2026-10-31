@@ -4,6 +4,12 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Multimodal RAG - Asistente de Documentación Técnica",
   description: "Sistema RAG multimodal con extracción espacial de diagramas y búsqueda híbrida.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+  },
 };
 
 export default function RootLayout({
