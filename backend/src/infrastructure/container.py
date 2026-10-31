@@ -3,6 +3,7 @@ from src.adapters.job_repository.redis_job_repository import RedisJobRepository
 from src.adapters.llm.llm_factory import LLMFactory
 from src.adapters.parsers.pymupdf_parser import PyMuPDFParser
 from src.adapters.storage.local_storage import LocalStorageAdapter
+from src.adapters.storage.supabase_storage import SupabaseStorageAdapter
 from src.adapters.vector_db.vector_store_factory import VectorStoreFactory
 from src.application.delete_document import DeleteDocumentUseCase
 from src.application.get_job_status import GetJobStatusUseCase
@@ -27,7 +28,15 @@ class Container:
         )
 
         # 1. Storage & Job Repository (Persistent Redis with in-memory fallback)
-        self.storage = LocalStorageAdapter(base_storage_path=settings.STORAGE_PATH)
+        if settings.STORAGE_PROVIDER.lower() == "supabase":
+            self.storage = SupabaseStorageAdapter(
+                base_storage_path=settings.STORAGE_PATH,
+                supabase_url=settings.SUPABASE_URL,
+                service_role_key=settings.SUPABASE_SERVICE_ROLE_KEY,
+                bucket=settings.SUPABASE_STORAGE_BUCKET,
+            )
+        else:
+            self.storage = LocalStorageAdapter(base_storage_path=settings.STORAGE_PATH)
         self.job_repo = RedisJobRepository(redis_url=settings.REDIS_URL)
 
         # 2. Document Parser (Multimodal + Spatial)

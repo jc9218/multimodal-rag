@@ -68,6 +68,10 @@ services:
       - BM25_MAX_CHUNKS_IN_MEMORY=${BM25_MAX_CHUNKS_IN_MEMORY:-2000}
       - RECOVER_INTERRUPTED_JOBS=${RECOVER_INTERRUPTED_JOBS:-true}
       - STORAGE_PATH=/app/storage
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER:-local}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-documents}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

@@ -38,6 +38,10 @@ class Settings(BaseSettings):
 
     # Storage & Cache (Auxiliary Services)
     STORAGE_PATH: str = "./storage"
+    STORAGE_PROVIDER: str = "local"
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "documents"
     REDIS_URL: str = "redis://redis:6379/0"
 
     # CORS

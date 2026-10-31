@@ -72,28 +72,22 @@ async def upload_document(
     # 1. Stream upload directly to disk asynchronously using await file.read()
     # This prevents blocking the asyncio event loop or deadlocking with the client on cloud proxies like Render
     document_id = str(uuid.uuid4())
-    safe_filename = f"{document_id}_{filename}"
-    dest_path = os.path.join(app_container.storage.uploads_dir, os.path.basename(safe_filename))
-
     total_bytes = 0
     upload_started = time.monotonic()
     try:
-        with open(dest_path, "wb") as f:
-            while chunk := await file.read(64 * 1024):
-                total_bytes += len(chunk)
-                if total_bytes > MAX_FILE_SIZE:
-                    raise UploadSizeExceededError
-                f.write(chunk)
+        content = await file.read(MAX_FILE_SIZE + 1)
+        total_bytes = len(content)
+        if total_bytes > MAX_FILE_SIZE:
+            raise UploadSizeExceededError
+        document_id = str(uuid.uuid4())
+        safe_filename = f"{document_id}_{filename}"
+        dest_path = app_container.storage.save_upload(safe_filename, content)
     except UploadSizeExceededError:
-        if os.path.exists(dest_path):
-            os.remove(dest_path)
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"El archivo excede el tamaño máximo permitido de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
         ) from None
     except Exception as exc:
-        if os.path.exists(dest_path):
-            os.remove(dest_path)
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -134,6 +135,17 @@ def readiness_check():
     """Reports whether persistent job recovery is available for this instance."""
     app_container = __import__("src.infrastructure.container", fromlist=["container"]).container
     persistent_jobs = getattr(app_container.job_repo, "is_persistent", False)
+    storage_path = app_container.storage.base_path
+    remote_storage = settings.STORAGE_PROVIDER.lower() == "supabase"
+    storage_ready = (
+        remote_storage
+        or (
+            os.path.isabs(settings.STORAGE_PATH)
+        and os.path.isdir(app_container.storage.uploads_dir)
+        and os.path.isdir(app_container.storage.images_dir)
+        and os.access(app_container.storage.uploads_dir, os.W_OK)
+        )
+    )
     if settings.ENVIRONMENT == "production" and not persistent_jobs:
         return JSONResponse(
             status_code=503,
@@ -142,7 +154,22 @@ def readiness_check():
                 "reason": "Persistent Redis job storage is unavailable.",
             },
         )
+    if settings.ENVIRONMENT == "production" and not storage_ready:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "not_ready",
+                "reason": (
+                    "Persistent storage is unavailable or STORAGE_PATH is not an "
+                    "absolute writable mount."
+                ),
+                "storage_path": storage_path,
+                "uploads_dir": app_container.storage.uploads_dir,
+            },
+        )
     return {
         "status": "ready",
         "persistent_jobs": persistent_jobs,
+        "storage_path": storage_path,
+        "storage_ready": storage_ready,
     }
