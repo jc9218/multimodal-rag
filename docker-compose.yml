@@ -1,0 +1,107 @@
+services:
+  # ============================================================================
+  # 1. SERVICIOS AUXILIARES
+  # ============================================================================
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: multimodal-rag-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/usr/bin/bash", "-c", "cat < /dev/null > /dev/tcp/127.0.0.1/6333"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: multimodal-rag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ============================================================================
+  # 2. BACKEND API (FastAPI)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: multimodal-rag-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=development
+      - VECTOR_STORE_PROVIDER=qdrant
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - LLM_PROVIDER_API_KEY=${LLM_PROVIDER_API_KEY:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://host.docker.internal:11434}
+      - LLM_MODEL=${LLM_MODEL}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - EMBEDDING_DIMENSION=${EMBEDDING_DIMENSION:-768}
+      - LLM_MAX_CONTEXT_CHARS=${LLM_MAX_CONTEXT_CHARS:-12000}
+      - LLM_MAX_HISTORY_CHARS=${LLM_MAX_HISTORY_CHARS:-2400}
+      - LLM_MAX_OUTPUT_TOKENS=${LLM_MAX_OUTPUT_TOKENS:-512}
+      - LLM_THINKING_BUDGET=${LLM_THINKING_BUDGET:-0}
+      - OCR_DPI=${OCR_DPI:-120}
+      - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-50}
+      - EMBEDDING_BATCH_SIZE=${EMBEDDING_BATCH_SIZE:-10}
+      - QDRANT_UPSERT_BATCH_SIZE=${QDRANT_UPSERT_BATCH_SIZE:-10}
+      - BM25_MAX_CHUNKS_IN_MEMORY=${BM25_MAX_CHUNKS_IN_MEMORY:-2000}
+      - MAX_EXTRACTED_IMAGE_MB=${MAX_EXTRACTED_IMAGE_MB:-8}
+      - RECOVER_INTERRUPTED_JOBS=${RECOVER_INTERRUPTED_JOBS:-true}
+      - STORAGE_PATH=/app/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - backend_storage:/app/storage
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ============================================================================
+  # 3. FRONTEND (Next.js 16)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    container_name: multimodal-rag-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+# ==============================================================================
+# PERSISTENCIA DE VOLÚMENES
+# ==============================================================================
+volumes:
+  qdrant_storage:
+  redis_data:
+  backend_storage:
