@@ -441,8 +441,9 @@ class QdrantAdapter(VectorStorePort):
             c_mem = c.model_copy()
             c_mem.embedding = None
             self._corpus_chunks[c.id] = c_mem
-            self._bm25_chunk_ids.append(c.id)
-            self._bm25_tokenized_corpus.append(_tokenize_bm25(_chunk_search_text(c)))
+            if c.id not in self._bm25_chunk_ids:
+                self._bm25_chunk_ids.append(c.id)
+                self._bm25_tokenized_corpus.append(_tokenize_bm25(_chunk_search_text(c)))
             self._trim_bm25_memory()
             if progress_callback and (index == total_chunks or index % 25 == 0):
                 progress_callback(

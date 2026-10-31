@@ -56,6 +56,7 @@ def test_ingest_document_use_case_success():
         file_path="/tmp/doc.pdf",
         document_id="doc1",
         progress_callback=mock_parser.parse_pdf.call_args.kwargs["progress_callback"],
+        page_callback=mock_parser.parse_pdf.call_args.kwargs["page_callback"],
     )
     mock_llm.generate_embeddings.assert_called_once_with([sample_chunk.text])
     assert sample_chunk.embedding == [0.1] * 1536
@@ -108,10 +109,39 @@ def test_scanned_pdf_ingestion_with_ocr():
         file_path="/tmp/scan.pdf",
         document_id="scan_doc",
         progress_callback=mock_parser.parse_pdf.call_args.kwargs["progress_callback"],
+        page_callback=mock_parser.parse_pdf.call_args.kwargs["page_callback"],
     )
     mock_vector_store.index_chunks.assert_called_once()
     last_update_call = mock_job_repo.update_job_status.call_args_list[-1]
     assert last_update_call.kwargs["status"] == JobStatusEnum.COMPLETED
+
+
+def test_ingestion_indexes_page_checkpoints_and_skips_final_duplicate_index():
+    mock_parser = MagicMock()
+    mock_vector_store = MagicMock()
+    mock_llm = MagicMock()
+    mock_job_repo = MagicMock()
+    chunk = Chunk(
+        id="stable-page-chunk",
+        document_id="doc-checkpoint",
+        text="Persisted page checkpoint",
+        page=1,
+        bbox=BoundingBox(page=1, x0=0, y0=0, x1=10, y1=10),
+    )
+    mock_llm.generate_embeddings.return_value = [[0.1] * 3]
+    mock_vector_store.index_chunks.return_value = 1
+
+    def parse_with_checkpoint(**kwargs):
+        kwargs["page_callback"](1, 1, [chunk], [])
+        return [chunk], []
+
+    mock_parser.parse_pdf.side_effect = parse_with_checkpoint
+    use_case = IngestDocumentUseCase(mock_parser, mock_vector_store, mock_llm, mock_job_repo)
+
+    use_case.execute_async("job-checkpoint", "/tmp/doc.pdf", "doc-checkpoint")
+
+    mock_vector_store.index_chunks.assert_called_once_with([chunk])
+    assert mock_job_repo.update_job_status.call_args_list[-1].kwargs["status"] == JobStatusEnum.COMPLETED
 
 
 def test_query_rag_use_case_with_results():

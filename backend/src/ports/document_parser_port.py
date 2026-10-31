@@ -10,6 +10,9 @@ class DocumentParserPort(ABC):
         file_path: str,
         document_id: str,
         progress_callback: Optional[Callable[[float, str], None]] = None,
+        page_callback: Optional[
+            Callable[[int, int, List[Chunk], List[ExtractedImage]], None]
+        ] = None,
     ) -> Tuple[List[Chunk], List[ExtractedImage]]:
         """
         Parses a PDF file extracting text chunks with layout/bounding boxes,

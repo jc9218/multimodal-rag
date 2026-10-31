@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-import uuid
 from typing import Callable, List, Optional, Tuple
 try:
     import pymupdf as fitz
@@ -31,6 +30,9 @@ class PyMuPDFParser(DocumentParserPort):
         file_path: str,
         document_id: str,
         progress_callback: Optional[Callable[[float, str], None]] = None,
+        page_callback: Optional[
+            Callable[[int, int, List[Chunk], List[ExtractedImage]], None]
+        ] = None,
     ) -> Tuple[List[Chunk], List[ExtractedImage]]:
         logger.info(f"Parsing PDF document '{file_path}' (doc_id={document_id}) with PyMuPDF")
         doc = fitz.open(file_path)
@@ -112,7 +114,7 @@ class PyMuPDFParser(DocumentParserPort):
 
                     # Handle all occurrences/positions where this image appears on the page
                     for rect_idx, rect in enumerate(usable_rects):
-                        image_id = f"img_{document_id}_p{page_num}_{img_idx}_{rect_idx}_{uuid.uuid4().hex[:6]}"
+                        image_id = f"img_{document_id}_p{page_num}_{img_idx}_{rect_idx}"
                         image_filename = f"{image_id}.{image_ext}"
 
                         save_started = time.perf_counter()
@@ -184,6 +186,7 @@ class PyMuPDFParser(DocumentParserPort):
         for page_idx in range(len(doc)):
             page_num = page_idx + 1
             page = doc[page_idx]
+            page_chunk_start = len(all_chunks)
             page_imgs = page_images_map.get(page_num, [])
             logger.info("Extracting page %s/%s", page_num, len(doc))
             page_started = time.perf_counter()
@@ -228,7 +231,7 @@ class PyMuPDFParser(DocumentParserPort):
                         tbl_img_candidates.sort(key=lambda x: x[1])
                         associated_tbl_imgs = [img.id for img, _ in tbl_img_candidates[:1]]
 
-                        tbl_chunk_id = f"chunk_{document_id}_p{page_num}_tbl_{tbl_idx}_{uuid.uuid4().hex[:6]}"
+                        tbl_chunk_id = f"chunk_{document_id}_p{page_num}_tbl_{tbl_idx}"
                         all_chunks.append(
                             Chunk(
                                 id=tbl_chunk_id,
@@ -295,7 +298,7 @@ class PyMuPDFParser(DocumentParserPort):
                             del img_bytes
                             del pix
                             raise ValueError("Scanned page image exceeds configured limit")
-                        image_id = f"img_{document_id}_p{page_num}_scan_{uuid.uuid4().hex[:6]}"
+                        image_id = f"img_{document_id}_p{page_num}_scan"
                         image_filename = f"{image_id}.png"
                         dest_path = self.storage.save_image(
                             document_id=document_id,
@@ -384,7 +387,7 @@ class PyMuPDFParser(DocumentParserPort):
                         associated_images = [adjacent_imgs[0].id]
 
                 first_block_no = group[0]["block_no"]
-                chunk_id = f"chunk_{document_id}_p{page_num}_{first_block_no}_{uuid.uuid4().hex[:6]}"
+                chunk_id = f"chunk_{document_id}_p{page_num}_{first_block_no}"
                 chunk = Chunk(
                     id=chunk_id,
                     document_id=document_id,
@@ -458,6 +461,14 @@ class PyMuPDFParser(DocumentParserPort):
             if current_group:
                 flush_group(current_group, current_section_title)
                 current_group = []
+            if page_callback:
+                page_callback(
+                    page_num,
+                    len(doc),
+                    all_chunks[page_chunk_start:],
+                    page_imgs,
+                )
+                del all_chunks[page_chunk_start:]
             if progress_callback:
                 progress_callback(
                     0.5 + (page_num / len(doc)) * 0.5,

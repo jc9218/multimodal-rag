@@ -171,10 +171,51 @@ class IngestDocumentUseCase:
                         message=detail,
                     )
 
+                incremental_state = {"called": False, "indexed": 0}
+                job_obj = self.job_repo.get_job(job_id)
+                doc_name = job_obj.filename if job_obj else document_id
+                created_at_iso = (
+                    job_obj.created_at.isoformat()
+                    if job_obj and hasattr(job_obj, "created_at")
+                    else None
+                )
+
+                def index_page(
+                    page_num: int,
+                    total_pages: int,
+                    page_chunks: list,
+                    page_images: list,
+                ) -> None:
+                    incremental_state["called"] = True
+                    for chunk in page_chunks:
+                        chunk.metadata["document_name"] = doc_name
+                        if created_at_iso:
+                            chunk.metadata["created_at"] = created_at_iso
+                    if hasattr(self.vector_store, "register_images"):
+                        self.vector_store.register_images(page_images)
+
+                    for start in range(0, len(page_chunks), settings.EMBEDDING_BATCH_SIZE):
+                        batch = page_chunks[start : start + settings.EMBEDDING_BATCH_SIZE]
+                        embeddings = self.llm.generate_embeddings([c.text for c in batch])
+                        for chunk, embedding in zip(batch, embeddings):
+                            chunk.embedding = embedding
+                    indexed = self.vector_store.index_chunks(page_chunks)
+                    incremental_state["indexed"] += indexed
+                    self.job_repo.update_job_status(
+                        job_id=job_id,
+                        status=JobStatusEnum.INDEXING,
+                        progress=round(0.35 + 0.63 * page_num / max(total_pages, 1), 2),
+                        message=(
+                            f"Página {page_num} de {total_pages} procesada; "
+                            f"{incremental_state['indexed']} fragmentos guardados."
+                        ),
+                    )
+
                 chunks, images = self.parser.parse_pdf(
                     file_path=file_path,
                     document_id=document_id,
                     progress_callback=report_extraction_progress,
+                    page_callback=index_page,
                 )
                 logger.info(
                     "[IngestDocumentUseCase:execute_async] extraction_complete "
@@ -204,14 +245,7 @@ class IngestDocumentUseCase:
                     message=f"Estructura analizada ({len(chunks)} fragmentos, {len(images)} imágenes). Iniciando procesamiento...",
                 )
 
-                # Ensure document_name and created_at are populated across all chunks
-                job_obj = self.job_repo.get_job(job_id)
-                doc_name = job_obj.filename if job_obj else document_id
-                created_at_iso = (
-                    job_obj.created_at.isoformat()
-                    if job_obj and hasattr(job_obj, "created_at")
-                    else None
-                )
+                # Ensure document_name and created_at are populated across all chunks.
                 for c in chunks:
                     c.metadata["document_name"] = doc_name
                     if created_at_iso:
@@ -232,6 +266,22 @@ class IngestDocumentUseCase:
                     progress=0.35,
                     message=f"Imágenes registradas ({len(images)}). Preparando embeddings...",
                 )
+
+                if incremental_state["called"]:
+                    del chunks
+                    del images
+                    gc.collect()
+                    self.job_repo.update_job_status(
+                        job_id=job_id,
+                        status=JobStatusEnum.COMPLETED,
+                        progress=1.0,
+                        message=(
+                            f"¡Documento listo! {incremental_state['indexed']} "
+                            "fragmentos preparados para consulta."
+                        ),
+                    )
+                    self._cleanup_local_cache(document_id)
+                    return
 
                 # Step 2: Dense Embeddings Generation (Batched with quota recovery & direct assignment)
                 total_chunks = len(chunks)
