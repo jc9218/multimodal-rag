@@ -78,13 +78,11 @@ async def upload_document(
     total_bytes = 0
     upload_started = time.monotonic()
     try:
-        content = await file.read(MAX_FILE_SIZE + 1)
-        total_bytes = len(content)
-        if total_bytes > MAX_FILE_SIZE:
-            raise UploadSizeExceededError
+        await file.seek(0)
         document_id = str(uuid.uuid4())
         safe_filename = f"{document_id}_{filename}"
-        dest_path = app_container.storage.save_upload(safe_filename, content)
+        dest_path = app_container.storage.save_upload(safe_filename, file.file)
+        total_bytes = os.path.getsize(dest_path)
     except UploadSizeExceededError:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,

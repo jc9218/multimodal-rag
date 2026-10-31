@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     LLM_MAX_OUTPUT_TOKENS: int = 512
     LLM_THINKING_BUDGET: int = 0
     OCR_DPI: int = 120
+    MAX_EXTRACTED_IMAGE_MB: int = 2
+    MAX_IMAGES_PER_DOCUMENT: int = 80
     # Free Render instances and low-quota models need a conservative upload
     # limit to avoid exhausting web-process memory during PDF parsing.
     RESOURCE_PROFILE: str = "free"

@@ -10,6 +10,7 @@ except ImportError:
 from src.domain.models import BoundingBox, Chunk, ExtractedImage
 from src.ports.document_parser_port import DocumentParserPort
 from src.ports.storage_port import StoragePort
+from src.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ class PyMuPDFParser(DocumentParserPort):
 
         all_images: List[ExtractedImage] = []
         page_images_map: dict[int, List[ExtractedImage]] = {}
+        max_image_bytes = settings.MAX_EXTRACTED_IMAGE_MB * 1024 * 1024
 
         # Pass 1: Extract all embedded images (handling multiple occurrences / all rects per xref)
         for page_idx in range(len(doc)):
@@ -86,6 +88,22 @@ class PyMuPDFParser(DocumentParserPort):
                     image_bytes = extracted.get("image")
                     image_ext = extracted.get("ext", "png")
                     extracted_image_count += 1
+                    if len(image_bytes or b"") > max_image_bytes:
+                        logger.warning(
+                            "Skipping oversized image page=%s xref=%s bytes=%s limit=%s",
+                            page_num,
+                            xref,
+                            len(image_bytes or b""),
+                            max_image_bytes,
+                        )
+                        continue
+                    if len(all_images) >= settings.MAX_IMAGES_PER_DOCUMENT:
+                        logger.warning(
+                            "Skipping remaining images document_id=%s limit=%s",
+                            document_id,
+                            settings.MAX_IMAGES_PER_DOCUMENT,
+                        )
+                        break
                     if extract_elapsed >= 0.5:
                         logger.info(
                             "Slow image extraction page=%s xref=%s duration=%.2fs bytes=%s",
@@ -134,6 +152,8 @@ class PyMuPDFParser(DocumentParserPort):
 
                         all_images.append(img_obj)
                         page_images_map[page_num].append(img_obj)
+                    del image_bytes
+                    del extracted
 
                 except Exception as exc:
                     logger.warning(
@@ -156,6 +176,7 @@ class PyMuPDFParser(DocumentParserPort):
                     f"Página {page_num}/{len(doc)}: recursos visuales extraídos "
                     f"({saved_image_count} imágenes).",
                 )
+            fitz.TOOLS.store_shrink(100)
 
         # Pass 2: Extract text blocks, tables, and perform spatial correlation
         all_chunks: List[Chunk] = []
@@ -264,6 +285,16 @@ class PyMuPDFParser(DocumentParserPort):
                         render_started = time.perf_counter()
                         pix = page.get_pixmap(dpi=self.ocr_dpi)
                         img_bytes = pix.tobytes("png")
+                        if len(img_bytes) > max_image_bytes:
+                            logger.warning(
+                                "Skipping oversized scanned page image page=%s bytes=%s limit=%s",
+                                page_num,
+                                len(img_bytes),
+                                max_image_bytes,
+                            )
+                            del img_bytes
+                            del pix
+                            raise ValueError("Scanned page image exceeds configured limit")
                         image_id = f"img_{document_id}_p{page_num}_scan_{uuid.uuid4().hex[:6]}"
                         image_filename = f"{image_id}.png"
                         dest_path = self.storage.save_image(
@@ -292,6 +323,8 @@ class PyMuPDFParser(DocumentParserPort):
                         )
                         all_images.append(scan_img)
                         page_imgs.append(scan_img)
+                        del img_bytes
+                        del pix
                         render_elapsed = time.perf_counter() - render_started
                         logger.info(
                             "Scanned page render completed page=%s/%s duration=%.2fs bytes=%s",
@@ -431,6 +464,7 @@ class PyMuPDFParser(DocumentParserPort):
                     f"Página {page_num}/{len(doc)} completada: "
                     f"{len(all_chunks)} fragmentos acumulados.",
                 )
+            fitz.TOOLS.store_shrink(100)
             logger.info(
                 "Page extraction summary page=%s/%s duration=%.2fs text_blocks=%s "
                 "native_chars=%s tables=%s text=%.2fs tables_time=%.2fs ocr=%.2fs "
