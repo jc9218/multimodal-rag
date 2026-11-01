@@ -9,6 +9,7 @@ from src.adapters.storage.local_storage import (
     StorageCapacityExceededError,
     UploadSizeExceededError,
 )
+from src.adapters.storage.supabase_storage import SupabaseStorageError
 from src.domain.exceptions import JobNotFoundError
 from src.domain.models import IngestionJob, JobStatusEnum
 from src.infrastructure.container import Container, get_container
@@ -114,6 +115,21 @@ async def upload_document(
             status_code=status.HTTP_507_INSUFFICIENT_STORAGE,
             detail="El almacenamiento local no tiene espacio suficiente para conservar este archivo.",
         ) from None
+    except SupabaseStorageError as exc:
+        logger.error(
+            "[DocumentsRoute:upload_document] Supabase rejected uploaded file.",
+            exc_info=True,
+        )
+        try:
+            app_container.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception(
+                "[DocumentsRoute:upload_document] Failed to clean storage after Supabase rejection."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
     except Exception as exc:
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)
         raise HTTPException(

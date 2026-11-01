@@ -4,12 +4,19 @@ import tempfile
 from typing import BinaryIO, Optional, Union
 
 import httpx
+import logging
 
 from src.adapters.storage.local_storage import (
     LocalStorageAdapter,
     MAX_UPLOAD_SIZE,
     UploadSizeExceededError,
 )
+
+logger = logging.getLogger(__name__)
+
+
+class SupabaseStorageError(RuntimeError):
+    """Raised when Supabase rejects or cannot persist a storage object."""
 
 
 # Clase: SupabaseStorageAdapter.
@@ -37,7 +44,6 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
             f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket}"
         )
         self._headers = {
-            "Authorization": f"Bearer {service_role_key}",
             "Authorization": "Bearer " + service_role_key,
             "apikey": service_role_key,
         }
@@ -68,11 +74,25 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
                 temp_file.seek(0)
                 response = httpx.put(
                     object_url,
-                    headers={**self._headers, "x-upsert": "true"},
+                    headers={
+                        **self._headers,
+                        "Content-Type": "application/pdf",
+                        "x-upsert": "true",
+                    },
                     content=temp_file,
                     timeout=60.0,
                 )
-                response.raise_for_status()
+                if response.is_error:
+                    logger.error(
+                        "Supabase upload rejected object path=%s status=%s response=%s",
+                        f"uploads/{safe_filename}",
+                        response.status_code,
+                        response.text[:500],
+                    )
+                    raise SupabaseStorageError(
+                        f"Supabase rechazó el archivo ({response.status_code}). "
+                        "Verifica el bucket configurado y la clave de servicio."
+                    )
                 local_path = os.path.join(self.uploads_dir, safe_filename)
                 temp_file.seek(0)
                 with open(local_path, "wb") as local_file:
@@ -127,7 +147,11 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         object_name = f"images/{safe_document_id}/{safe_image_filename}"
         response = httpx.put(
             f"{self._object_url}/{object_name}",
-            headers={**self._headers, "x-upsert": "true"},
+            headers={
+                **self._headers,
+                "Content-Type": "image/png",
+                "x-upsert": "true",
+            },
             content=image_bytes,
             timeout=60.0,
         )
