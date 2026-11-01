@@ -444,7 +444,7 @@ def test_quota_exhaustion_retries_degrades_to_bm25(monkeypatch):
     # Job should complete with BM25 fallback, NOT fail!
     assert statuses[-1] == JobStatusEnum.COMPLETED
     last_update = mock_job_repo.update_job_status.call_args_list[-1]
-    assert "búsqueda léxica (bm25)" in last_update.kwargs.get("message", "").lower()
+    assert "método alternativo" in last_update.kwargs.get("message", "").lower()
     assert mock_vector_store.index_chunks.call_count == 1
 
 
@@ -493,7 +493,7 @@ def test_daily_quota_degrades_to_bm25_immediately(monkeypatch):
     assert JobStatusEnum.WAITING_QUOTA not in statuses
     assert statuses[-1] == JobStatusEnum.COMPLETED
     last_update = mock_job_repo.update_job_status.call_args_list[-1]
-    assert "búsqueda léxica (bm25)" in last_update.kwargs.get("message", "").lower()
+    assert "método alternativo" in last_update.kwargs.get("message", "").lower()
     assert mock_vector_store.index_chunks.call_count == 1
 
 

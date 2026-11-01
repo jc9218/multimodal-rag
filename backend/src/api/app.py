@@ -117,7 +117,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "Error interno del servidor al procesar la solicitud."},
+        content={"detail": "No se pudo completar la solicitud. Intenta nuevamente."},
     )
 
 # Robust CORS configuration for local development and Vercel domains

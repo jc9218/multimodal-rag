@@ -66,7 +66,7 @@ def query_rag(
         logger.error(f"[ChatRoute:query_rag] LLM service failure for query '{request.query}': {e}", exc_info=True)
         return QueryResponse(
             query=request.query,
-            answer="El servicio de inteligencia artificial no pudo completar la respuesta en este momento (posible límite de tasa temporal). Por favor intenta nuevamente en unos instantes.",
+            answer="No se pudo completar la respuesta en este momento. Por favor, intenta nuevamente.",
             sources=[],
             images=[],
             is_defensive=True,
@@ -75,7 +75,7 @@ def query_rag(
         logger.error(f"[ChatRoute:query_rag] Vector store failure for query '{request.query}': {e}", exc_info=True)
         return QueryResponse(
             query=request.query,
-            answer="Hubo un problema al consultar el índice de los documentos. Por favor intenta nuevamente en unos momentos.",
+            answer="No se pudo consultar el documento en este momento. Por favor, intenta nuevamente.",
             sources=[],
             images=[],
             is_defensive=True,
@@ -84,7 +84,7 @@ def query_rag(
         logger.error(f"[ChatRoute:query_rag] Unhandled error for query '{request.query}': {e}", exc_info=True)
         return QueryResponse(
             query=request.query,
-            answer="Ocurrió un error inesperado al procesar tu consulta técnica. Por favor formula nuevamente tu pregunta o reintenta en unos instantes.",
+            answer="No se pudo completar la consulta. Por favor, intenta nuevamente.",
             sources=[],
             images=[],
             is_defensive=True,

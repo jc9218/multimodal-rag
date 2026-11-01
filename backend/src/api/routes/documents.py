@@ -62,7 +62,7 @@ async def upload_document(
     if not filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Solo se admiten documentos en formato PDF.",
+            detail="El archivo no es válido. Selecciona un documento PDF.",
         )
 
     content_length = request.headers.get("content-length")
@@ -86,7 +86,7 @@ async def upload_document(
     if not header.startswith(b"%PDF-"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El archivo proporcionado no tiene una estructura PDF válida.",
+            detail="El archivo no se puede leer. Selecciona otro documento PDF.",
         )
     await file.seek(0)
 
@@ -104,7 +104,7 @@ async def upload_document(
     except UploadSizeExceededError:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"El archivo excede el tamaño máximo permitido de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
+            detail=f"El archivo supera el límite permitido de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
         ) from None
     except StorageCapacityExceededError:
         try:
@@ -113,7 +113,7 @@ async def upload_document(
             logger.exception("[DocumentsRoute:upload_document] Storage cleanup failed after capacity rejection.")
         raise HTTPException(
             status_code=status.HTTP_507_INSUFFICIENT_STORAGE,
-            detail="El almacenamiento local no tiene espacio suficiente para conservar este archivo.",
+            detail="No hay espacio suficiente para guardar el archivo. Intenta con otro archivo.",
         ) from None
     except SupabaseStorageError as exc:
         logger.error(
@@ -137,7 +137,7 @@ async def upload_document(
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No fue posible guardar el archivo en el almacenamiento del servidor.",
+            detail="No se pudo guardar el archivo. Intenta nuevamente.",
         ) from exc
 
     try:
@@ -199,7 +199,7 @@ def get_job_status(
     try:
         return app_container.get_job_use_case.execute(job_id)
     except JobNotFoundError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No se encontró el archivo solicitado.")
 
 
 # Objetivo: Cancel job.
@@ -220,7 +220,7 @@ def cancel_job(
     try:
         job = app_container.get_job_use_case.execute(job_id)
     except JobNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trabajo no encontrado")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No se encontró el procesamiento solicitado.")
 
     # 1. Mark job as CANCELLED in repository so background worker halts immediately
     app_container.job_repo.update_job_status(
@@ -259,7 +259,7 @@ def get_extracted_image(
 ):
     image_path = app_container.storage.get_image_path(document_id, filename)
     if not image_path or not os.path.exists(image_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,         detail="No se encontró la imagen solicitada.")
     return FileResponse(image_path)
 
 
@@ -324,5 +324,5 @@ def delete_document(
         logger.error(f"[DocumentsRoute:delete_document] Error deleting document '{document_id}': {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No fue posible eliminar el documento debido a un error interno del servidor.",
+            detail="No se pudo eliminar el archivo. Intenta nuevamente.",
         )

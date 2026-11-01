@@ -153,7 +153,7 @@ class IngestDocumentUseCase:
                 job_id=job_id,
                 status=JobStatusEnum.WAITING_QUOTA,
                 progress=progress,
-                message=f"Límite de cuota alcanzado. Esperando restablecimiento para continuar ({remaining}s restantes)...",
+                message=f"El procesamiento está en pausa temporal. Continuará automáticamente ({remaining}s restantes)...",
             )
             time.sleep(2)
 
@@ -233,7 +233,7 @@ class IngestDocumentUseCase:
                         job_id=job_id,
                         status=JobStatusEnum.INDEXING,
                         progress=progress,
-                        message="Límite de reintentos de cuota alcanzado. Continuando con índice léxico BM25...",
+                        message="La respuesta automática no está disponible temporalmente. Continuando con un método alternativo...",
                     )
                     dim = getattr(self.llm, "embedding_dim", settings.EMBEDDING_DIMENSION)
                     return [[0.0] * dim for _ in texts]
@@ -360,7 +360,7 @@ class IngestDocumentUseCase:
                     del images
                     release_memory()
                     if incremental_state.get("degraded"):
-                        msg = f"¡Documento listo! {incremental_state['indexed']} fragmentos indexados con búsqueda léxica (BM25) por cuota de IA."
+                        msg = f"¡Documento listo! {incremental_state['indexed']} fragmentos preparados con un método alternativo."
                     else:
                         msg = (
                             f"¡Documento listo! {incremental_state['indexed']} fragmentos preparados para consulta."
@@ -499,7 +499,7 @@ class IngestDocumentUseCase:
 
                 # Step 4: Completion
                 msg = (
-                    f"¡Documento listo! {indexed_count} fragmentos indexados con búsqueda léxica (BM25) por cuota de IA."
+                    f"¡Documento listo! {indexed_count} fragmentos preparados con un método alternativo."
                     if incremental_state.get("degraded")
                     else f"¡Documento listo! {indexed_count} fragmentos preparados para consulta."
                 )
@@ -535,7 +535,7 @@ class IngestDocumentUseCase:
                 elif "timeout" in err_lower or "timed out" in err_lower:
                     user_msg = "El tiempo de respuesta del servicio de IA se agotó. Por favor intenta nuevamente."
                 elif "connection" in err_lower or "api_connection" in err_lower:
-                    user_msg = "No se pudo conectar con el servicio de IA. Verifica tu conexión a internet o el estado del proveedor."
+                    user_msg = "No se pudo completar una parte del procesamiento. Intenta nuevamente."
                 elif "unauthenticated" in err_lower or "invalid_api_key" in err_lower or "api_key" in err_lower:
                     user_msg = "La clave de acceso del proveedor de IA no es válida o ha expirado."
                 else:

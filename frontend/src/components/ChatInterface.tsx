@@ -98,7 +98,7 @@ export default function ChatInterface({
 
       if (raw.includes("tardó") || raw.includes("timeout") || raw.includes("TIMEOUT")) {
         friendlyText =
-          "El servidor en la nube tardó más de lo esperado en responder (puede estar despertándose tras inactividad en el plan gratuito de Render). Por favor reintenta tu pregunta en unos momentos.";
+          "La respuesta está tardando más de lo esperado. Por favor, intenta nuevamente en unos momentos.";
       } else if (
         raw.includes("404") ||
         raw.includes("not found") ||
@@ -108,17 +108,17 @@ export default function ChatInterface({
         raw.includes("completion")
       ) {
         friendlyText =
-          "El servicio de inteligencia artificial no se encuentra disponible temporalmente o la solicitud no pudo completarse. Por favor, formula nuevamente tu pregunta o reintenta en unos instantes.";
+          "No fue posible generar la respuesta en este momento. Por favor, intenta nuevamente.";
       } else if (raw.includes("vector") || raw.includes("base de datos")) {
         friendlyText =
-          "Hubo una dificultad momentánea al consultar los fragmentos del documento en el repositorio vectorial. Por favor, reintenta tu pregunta.";
+          "No fue posible consultar el documento en este momento. Por favor, intenta nuevamente.";
       } else if (
         raw &&
         !raw.includes("HTTP") &&
         !raw.includes("{") &&
         !raw.includes("Traceback")
       ) {
-        friendlyText = raw;
+        friendlyText = "No fue posible completar la consulta. Por favor, intenta nuevamente.";
       }
 
       assistantMessage = {

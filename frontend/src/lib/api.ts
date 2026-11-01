@@ -222,7 +222,7 @@ export async function getJobStatus(jobId: string): Promise<IngestionJob> {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
       logApiError(url, res.status, err);
-      throw new Error("No se pudo obtener el estado del trabajo");
+      throw new Error("No se pudo consultar el estado del archivo.");
     }
     const data: IngestionJob = await res.json();
     logApiResponse("GET", url, res.status, data);
@@ -244,7 +244,7 @@ export async function cancelJob(jobId: string): Promise<{ status: string; messag
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Error al cancelar trabajo` }));
       logApiError(url, res.status, err);
-      throw new Error(err.detail || "Error al cancelar trabajo");
+      throw new Error("No se pudo detener el procesamiento del archivo.");
     }
     const data = await res.json();
     logApiResponse("POST", url, res.status, data);
@@ -298,9 +298,7 @@ export async function queryRAG(
         .json()
         .catch(() => ({ detail: `HTTP ${res.status}: No se pudo obtener respuesta del servidor.` }));
       logApiError(url, res.status, err);
-      throw new Error(
-        err.detail || "No fue posible procesar la consulta técnica en este momento. Por favor reintenta en unos instantes."
-      );
+      throw new Error("No fue posible obtener una respuesta en este momento. Por favor, intenta nuevamente.");
     }
 
     const data: QueryResponse = await res.json();
@@ -310,7 +308,7 @@ export async function queryRAG(
     clearTimeout(timeoutId);
     if (error?.name === "AbortError") {
       logApiError(url, "TIMEOUT", "La solicitud superó el tiempo máximo de espera.");
-      throw new Error("El servidor tardó más de lo esperado en responder. Por favor, reintenta tu pregunta.");
+      throw new Error("La respuesta está tardando más de lo esperado. Por favor, intenta nuevamente.");
     }
     if (!error?.message?.includes("HTTP")) {
       logApiError(url, "NETWORK_ERROR", error);
@@ -352,7 +350,7 @@ export async function deleteDocument(documentId: string): Promise<void> {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Error al eliminar documento` }));
       logApiError(url, res.status, err);
-      throw new Error(err.detail || "Error al eliminar documento de la base de datos");
+      throw new Error("No se pudo eliminar el archivo. Por favor, intenta nuevamente.");
     }
     const data = await res.json().catch(() => ({ status: "deleted", documentId }));
     logApiResponse("DELETE", url, res.status, data);

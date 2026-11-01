@@ -199,7 +199,11 @@ export default function UploadModal({
         fileSize: targetFile.size,
         error: err,
       });
-      setError(err.message || "Error al subir el archivo");
+      setError(
+        err?.message?.includes("límite") || err?.message?.includes("válido")
+          ? err.message
+          : "No se pudo subir el archivo. Intenta nuevamente."
+      );
       // Continue with remaining files in queue if any
       if (remainingFiles.length > 0) {
         processNextInQueue(remainingFiles);
@@ -273,7 +277,7 @@ export default function UploadModal({
             error: currentJob.error,
             message: currentJob.message,
           });
-          setError(currentJob.error || currentJob.message || "El procesamiento del documento no pudo completarse.");
+          setError("No se pudo completar el procesamiento del archivo. Intenta nuevamente.");
           if (remainingFiles.length > 0) {
             processNextInQueue(remainingFiles);
           } else {
@@ -309,7 +313,7 @@ export default function UploadModal({
             prev
               ? {
                   ...prev,
-                  message: "Esperando a que la instancia en la nube de Render se active (~50s)...",
+                  message: "El procesamiento está tardando más de lo esperado. Estamos intentando continuar...",
                 }
               : prev
           );
@@ -323,7 +327,7 @@ export default function UploadModal({
             jobId,
             error: err,
           });
-          setError("El servidor en Render tardó demasiado en responder.");
+          setError("No se pudo confirmar el estado del archivo. Intenta nuevamente en unos segundos.");
         }
       }
     };
