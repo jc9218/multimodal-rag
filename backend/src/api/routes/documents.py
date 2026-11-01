@@ -128,7 +128,10 @@ async def upload_document(
             )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=str(exc),
+            detail=(
+                "No se pudo subir el archivo al almacenamiento. "
+                "El archivo no fue conservado; intenta nuevamente."
+            ),
         ) from exc
     except Exception as exc:
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)

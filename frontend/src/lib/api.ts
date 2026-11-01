@@ -170,6 +170,10 @@ export async function uploadDocument(
         };
         uploadError.status = res.status;
         logApiError(url, res.status, err);
+        if (res.status >= 500) {
+          uploadError.message =
+            "No se pudo subir el archivo. El archivo no fue conservado; intenta nuevamente.";
+        }
         throw uploadError;
       }
 
@@ -183,8 +187,8 @@ export async function uploadDocument(
         if (error instanceof Error && error.name === "AbortError") {
           logApiError(url, "TIMEOUT", "La subida superó el tiempo de espera.");
           throw new Error(
-            "El servidor en la nube de Render tardó en responder después de varios intentos. "
-            + "Puede estar despertándose de su estado inactivo; reintenta en unos segundos."
+            "No se pudo confirmar la subida del archivo después de varios intentos. "
+            + "Intenta nuevamente en unos segundos."
           );
         }
         if (!(error instanceof Error && error.message.includes("HTTP"))) {

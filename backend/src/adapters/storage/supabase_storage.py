@@ -1,6 +1,7 @@
 import os
 import re
 import tempfile
+import unicodedata
 from typing import BinaryIO, Optional, Union
 
 import httpx
@@ -43,16 +44,26 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         self._object_url = (
             f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket}"
         )
+        self._list_url = f"{supabase_url.rstrip('/')}/storage/v1/object/list/{bucket}"
         self._headers = {
             "Authorization": "Bearer " + service_role_key,
             "apikey": service_role_key,
         }
 
+    @staticmethod
+    def _safe_object_filename(filename: str) -> str:
+        normalized = unicodedata.normalize("NFKD", os.path.basename(filename))
+        ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
+        safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", ascii_name)
+        if not safe_name.lower().endswith(".pdf"):
+            safe_name = f"{safe_name}.pdf"
+        return safe_name
+
     # Objetivo: Save upload.
     # Entradas: self, filename, content.
     # Salida: str.
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
-        safe_filename = os.path.basename(filename)
+        safe_filename = self._safe_object_filename(filename)
         object_url = f"{self._object_url}/uploads/{safe_filename}"
         self._ensure_capacity(MAX_UPLOAD_SIZE)
         with tempfile.NamedTemporaryFile(
@@ -83,15 +94,15 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
                     timeout=60.0,
                 )
                 if response.is_error:
+                    detail = response.text[:500]
                     logger.error(
                         "Supabase upload rejected object path=%s status=%s response=%s",
                         f"uploads/{safe_filename}",
                         response.status_code,
-                        response.text[:500],
+                        detail,
                     )
                     raise SupabaseStorageError(
-                        f"Supabase rechazó el archivo ({response.status_code}). "
-                        "Verifica el bucket configurado y la clave de servicio."
+                        f"Supabase rechazó el archivo ({response.status_code}): {detail}"
                     )
                 local_path = os.path.join(self.uploads_dir, safe_filename)
                 temp_file.seek(0)
@@ -116,7 +127,7 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         safe_filename = os.path.basename(filename)
         if safe_filename != filename:
             return None
-        object_name = f"{document_id}_{safe_filename}"
+        object_name = f"{document_id}_{self._safe_object_filename(filename)}"
         local_path = os.path.join(self.uploads_dir, object_name)
         try:
             response = httpx.get(
@@ -190,17 +201,32 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
     # Entradas: self, document_id.
     # Salida: None.
     def delete_document_files(self, document_id: str) -> None:
-        object_name_prefix = f"{document_id}_"
         try:
-            response = httpx.post(
-                f"{self._object_url}/remove",
-                headers={**self._headers, "Content-Type": "application/json"},
-                json=[
-                    f"uploads/{object_name_prefix}",
-                    f"images/{document_id}/",
-                ],
-                timeout=30.0,
+            object_paths: list[str] = []
+            for prefix in (f"uploads/{document_id}_", f"images/{document_id}/"):
+                response = httpx.post(
+                    self._list_url,
+                    headers={**self._headers, "Content-Type": "application/json"},
+                    json={"prefix": prefix, "limit": 1000},
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+                for item in response.json():
+                    if isinstance(item, dict) and item.get("name"):
+                        object_paths.append(f"{prefix}{item['name']}")
+
+            if object_paths:
+                response = httpx.post(
+                    f"{self._object_url}/remove",
+                    headers={**self._headers, "Content-Type": "application/json"},
+                    json=object_paths,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+        except httpx.HTTPError:
+            logger.exception(
+                "Could not remove Supabase objects for document_id=%s",
+                document_id,
             )
-            response.raise_for_status()
         finally:
             super().delete_document_files(document_id)
