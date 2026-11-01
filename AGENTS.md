@@ -45,7 +45,7 @@ flowchart TD
 
     subgraph QualityAssurance["Quality Assurance & Resilience"]
         ResilienceAgent["Resilience & Cold-Start Agent (120s Timeout + Tenacity + Fallback)"]
-        TestRunnerAgent["Unit Testing & Mocking Agent (30 Tests)"]
+        TestRunnerAgent["Unit Testing & Mocking Agent (47 Tests)"]
     end
 
     Gateway --> StorageAgent
@@ -74,7 +74,7 @@ flowchart TD
 * **Code Components:** `frontend/src/app/page.tsx`, `frontend/src/components/sidebar/Sidebar.tsx`, `frontend/src/components/common/Navbar.tsx`, `frontend/src/components/chat/ChatHeader.tsx`, `frontend/src/components/chat/ChatInput.tsx`
 * **Responsibilities:**
   1. Off-canvas sliding drawer on mobile (`< lg`) with smooth transition (`translate-x-0` / `-translate-x-full`) and backdrop overlay dismissal.
-  2. Dual hamburger button access in both top `Navbar` and `ChatHeader` for one-thumb reachability on mobile devices.
+  2. Single hamburger button in `ChatHeader` for one-thumb access to the mobile drawer.
   3. Dynamic viewport adaptation using `h-[100dvh]` to eliminate scrolling overflow caused by mobile browser address bars (Safari/Chrome).
   4. iOS auto-zoom prevention: enforces `text-base sm:text-sm` (16px font-size) on chat input to maintain UI scale on mobile focus.
   5. Touch target accessibility: complies with mobile a11y standards maintaining $\ge 44 \times 44\text{ px}$ interactive touch targets.
@@ -162,7 +162,7 @@ flowchart TD
     5. Single Uvicorn worker enforcement (`--workers 1`) to guarantee bounded container memory footprint.
   * Captures and retries transient errors: `RateLimitError` (HTTP 429), `APIConnectionError`, and `APITimeoutError`.
   * **Ingestion Quota Recovery & BM25 Degradation Protocol (`WAITING_QUOTA`):** If an embedding call encounters a transient rate limit (HTTP 429 RPM), the worker transitions the job to `WAITING_QUOTA` with real-time countdown messaging, waiting up to 40s per retry for window reset. If a daily quota exhaustion limit is detected (e.g. 1000 requests/day, `free_tier_requests`, delay > 90s) or all retries are exhausted, the system automatically degrades to BM25 lexical indexing with zero-vectors in Qdrant, completing the upload in seconds and preventing job failure.
-  * **Batch Efficiency Protection:** `EMBEDDING_BATCH_SIZE=24` consolidates chunk embedding requests into compact calls, preventing small PDFs from exhausting provider RPM limits.
+  * **Batch Efficiency Protection:** `EMBEDDING_BATCH_SIZE=24` and `QDRANT_UPSERT_BATCH_SIZE=6` consolidate requests into bounded calls, while `BM25_MAX_CHUNKS_IN_MEMORY=800` limits the in-process lexical index.
   * *Exponential Backoff with Jitter*:
     $$T_{\text{wait}} = \min(\text{max\_wait}, \text{multiplier} \cdot 2^{\text{attempt}})$$
   * User-friendly contingency messages are always delivered in the chat interface.
@@ -173,10 +173,10 @@ flowchart TD
 * **Purpose:** Ensure persistence, file integrity, and exact real document names.
 * **Code Components:** `backend/src/adapters/storage/local_storage.py`, `frontend/src/lib/formatters.ts`
 * **Responsibilities:**
-  1. Store uploaded PDFs in `/app/storage/uploads/` following the pattern `{document_id}_{original_filename.pdf}`.
+  1. Store uploaded PDFs in `/app/storage/uploads/` following the pattern `{document_id}_{original_filename.pdf}`. Supabase object keys use an ASCII-safe normalized filename, while the original display name remains in job and document metadata.
   2. Store cropped diagram images in `/app/storage/images/{document_id}/`.
   3. Provide `list_uploaded_documents()` to recover human-readable original names without relying solely on RAM or vector DB state.
-  4. Faithfully preserve the original filename (casing, spaces, characters) as the chat title via `cleanDocumentTitle`.
+  4. Faithfully preserve the original filename (casing, spaces, characters) as the chat title via `cleanDocumentTitle`; remote storage normalization does not change the user-visible name.
   5. Physically cascade-delete files and images upon document deletion.
 
 ---
@@ -194,6 +194,7 @@ flowchart TD
   * Prompt injection shielding and XML delimiter sanitization (`test_security.py`).
   * Asynchronous streaming and upload quota enforcement (`test_upload_storage.py`).
   * Automated execution via `make test`.
+  * The frontend retries transient upload failures up to three attempts with the same `X-Upload-Id`, preventing duplicate jobs when a response is lost.
 
 ---
 

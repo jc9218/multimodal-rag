@@ -26,7 +26,7 @@ El sistema procesa documentos técnicos en PDF preservando la geometría visual 
 * **Selector Múltiple de Archivos y Cola Secuencial:** Admite seleccionar y soltar múltiples documentos PDF simultáneamente. El cliente gestiona una cola secuencial (`fileQueue`) para procesarlos de uno en uno, evitando sobrecargar la memoria de la instancia en la nube.
 * **Streaming Asíncrono de Subida (No Bloqueante):** La subida a `/api/v1/documents/upload` consume el flujo de bytes de manera asíncrona (`await file.read(64 * 1024)`), eliminando cuellos de botella y congelamientos en proxies de red como Render.
 * **Resiliencia ante Hibernación de Render (Free Tier):** Soporta el retardo de arranque en frío (*cold start* de ~50 segundos) característico de las instancias gratuitas de Render mediante timeouts de cliente de hasta 120 segundos y reintentos adaptativos en el sondeo del trabajo (`job polling`).
-* **Preservación Fiel del Nombre de Archivos:** Los títulos de chat y las referencias a los documentos conservan estrictamente el nombre original del archivo con sus mayúsculas, minúsculas y caracteres exactos.
+* **Preservación Fiel del Nombre de Archivos:** Los títulos de chat y las referencias a los documentos conservan estrictamente el nombre original del archivo con sus mayúsculas, minúsculas y caracteres exactos. En Supabase, la clave física se normaliza a ASCII para cumplir las reglas del almacenamiento, sin cambiar el nombre visible.
 * **Fuentes Agrupadas y Deduplicadas:** En las respuestas del asistente, las fuentes citadas se deduplican y agrupan automáticamente por documento y número de página (`Fuente: archivo.pdf, Pág. X`), evitando insignias repetidas.
 * **Arquitectura de Frontend Modular:** Interfaz dividida en componentes desacoplados (`Navbar`, `Sidebar`, `ChatList`, `ChatDocuments`, `FileDropzone`, `IngestionProgressCard`, `ChatHeader`, `ChatMessageList`, `MultimodalImagesView`), facilitando el mantenimiento y la escalabilidad.
 * **Bloqueo Inteligente de Input:** El campo de texto de consulta y el botón de envío permanecen inhabilitados hasta que el usuario asocia o sube al menos un documento PDF al espacio de chat activo, evitando preguntas sin contexto.
@@ -330,8 +330,26 @@ LLM_MAX_HISTORY_CHARS=2400
 LLM_MAX_OUTPUT_TOKENS=512
 LLM_THINKING_BUDGET=0
 
-# Almacenamiento local de documentos e imágenes
+# Límites de memoria, imágenes y almacenamiento
+RESOURCE_PROFILE=free
+MAX_UPLOAD_SIZE_MB=10
+OCR_DPI=96
+MAX_EXTRACTED_IMAGE_MB=2
+MAX_IMAGES_PER_DOCUMENT=80
+EMBEDDING_BATCH_SIZE=24
+QDRANT_UPSERT_BATCH_SIZE=6
+BM25_MAX_CHUNKS_IN_MEMORY=800
+RECOVER_INTERRUPTED_JOBS=true
+MAX_LOCAL_STORAGE_MB=400
+MIN_FREE_STORAGE_MB=64
+
+# Almacenamiento local o remoto de documentos e imágenes
 STORAGE_PATH=./storage
+STORAGE_PROVIDER=local
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_STORAGE_BUCKET=documents
+REDIS_URL=redis://redis:6379/0
 
 # Configuración CORS
 CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
@@ -361,6 +379,7 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * La ingesta guarda cada página en Qdrant al terminarla. Si Render reinicia el proceso, Redis conserva el job y la reanudación vuelve a procesar de forma idempotente las páginas ya guardadas, sin duplicar vectores; el progreso confirmado no depende de que la extracción completa llegue al final.
    * La subida web reintenta hasta 3 veces los fallos transitorios (Render despertándose, timeout, red, HTTP 408/425/429 y 5xx), con esperas de 2 y 5 segundos. Los errores de validación, tamaño o formato no se reintentan. Cada intento usa la misma clave `X-Upload-Id` para reutilizar el job si el servidor aceptó el archivo pero la respuesta se perdió.
    * Supabase Storage recibe claves normalizadas ASCII (`A-Z`, `a-z`, `0-9`, `.`, `_`, `-`); así, nombres con espacios, tildes o caracteres Unicode no producen `InvalidKey`. La limpieza remota lista primero los objetos bajo `uploads/{document_id}_` e `images/{document_id}/` y elimina las rutas exactas, como exige la API de Supabase.
+   * La navegación móvil usa un único botón hamburguesa en `ChatHeader`; `Navbar` conserva la marca, el estado y el acceso a capacidades sin duplicar controles.
    * Si aparece `Cannot recover job: upload is missing`, Redis conservó el estado del job pero el PDF no existe en `STORAGE_PATH/uploads`. Verifica el disco persistente, el `mount path` y que `STORAGE_PATH` apunte a ese montaje; ese archivo debe volver a subirse si ya fue eliminado por un despliegue anterior.
    * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes optimizados (`EMBEDDING_BATCH_SIZE=24`, `QDRANT_UPSERT_BATCH_SIZE=6`) y BM25 mantiene un límite en memoria de `BM25_MAX_CHUNKS_IN_MEMORY=800`. Los datos completos permanecen en Qdrant.
    * **Resiliencia ante Límites de Cuota de IA:** Si durante la generación de embeddings el proveedor de IA retorna error de cuota por minuto (HTTP 429 RPM), el sistema pasa a estado `WAITING_QUOTA` con cuenta regresiva dinámica en tiempo real y espera acotada (máx 40s). Si se detecta agotamiento de cuota diaria (RPD / *requests per day exceeded*) o se agotan los reintentos, el sistema **no falla la subida ni bloquea al usuario**: degrada de forma transparente al índice léxico BM25 con vectores neutros en Qdrant, permitiendo completar la ingesta en segundos y consultar el documento normalmente.
@@ -384,7 +403,7 @@ make test
 * `test_security.py`: Verificación de defensas contra Prompt Injection, neutralización de etiquetas XML y validación de límites de entrada.
 * `test_bounding_boxes.py`: Validación de coordenadas geométricas, intersecciones y cálculo de distancia euclidiana espacial.
 * `test_upload_storage.py`: Verificación de streaming binario de subida y eliminación segura en caso de exceso de tamaño.
-* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, checkpoints por página, OCR fallback, recuperación de cuota transitoria (`WAITING_QUOTA`), degradación inmediata a BM25 ante cuota diaria e imágenes recuperadas.
+* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, checkpoints por página, OCR fallback, recuperación de cuota transitoria (`WAITING_QUOTA`), conservación del progreso durante la espera, degradación ante cuota diaria e imágenes recuperadas.
 * `test_memory_efficiency.py`: Validación de recolección de basura, llamada segura a `malloc_trim(0)` e ingesta incremental con streaming de páginas.
 * `test_qdrant_images.py`: Pruebas de hidratación de imágenes extraídas, tokenización de nombres de documento y consultas de identidad.
 * `test_resilience.py`: Validación de reintentos exponenciales (*Exponential Backoff*), respuestas defensivas y omisión de presupuestos de pensamiento innecesarios.
