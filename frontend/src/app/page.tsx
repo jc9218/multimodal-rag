@@ -528,7 +528,6 @@ export default function Home() {
       {/* Top Navbar with Responsive Mobile Drawer Trigger */}
       <Navbar
         onOpenSkills={() => setShowSkillsModal(true)}
-        onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
       />
 
       {/* Main Content Body */}

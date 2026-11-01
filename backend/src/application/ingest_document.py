@@ -311,7 +311,11 @@ class IngestDocumentUseCase:
                     if hasattr(self.vector_store, "register_images"):
                         self.vector_store.register_images(page_images)
 
-                    cur_progress = round(0.35 + 0.63 * (page_num - 1) / max(total_pages, 1), 2)
+                    current_job = self.job_repo.get_job(job_id)
+                    cur_progress = max(
+                        float(current_job.progress) if current_job else 0.0,
+                        round(0.05 + 0.25 * page_num / max(total_pages, 1), 2),
+                    )
                     for start in range(0, len(page_chunks), settings.EMBEDDING_BATCH_SIZE):
                         batch = page_chunks[start : start + settings.EMBEDDING_BATCH_SIZE]
                         batch_texts = [c.text for c in batch]

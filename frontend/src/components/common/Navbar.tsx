@@ -1,31 +1,19 @@
 "use client";
 
 import React from "react";
-import { Cpu, Menu, Sparkles } from "lucide-react";
+import { Cpu, Sparkles } from "lucide-react";
 
 // Data contract: NavbarProps.
 // Inputs: onOpenSkills callback, optional onToggleSidebar for responsive mobile drawer.
 // Output: Header navbar component with responsive branding and controls.
 interface NavbarProps {
   onOpenSkills: () => void;
-  onToggleSidebar?: () => void;
 }
 
-export default function Navbar({ onOpenSkills, onToggleSidebar }: NavbarProps) {
+export default function Navbar({ onOpenSkills }: NavbarProps) {
   return (
     <header className="border-b border-slate-800 bg-slate-900/60 px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between backdrop-blur shrink-0">
       <div className="flex items-center space-x-2 sm:space-x-3">
-        {onToggleSidebar && (
-          <button
-            onClick={onToggleSidebar}
-            className="p-2 -ml-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition lg:hidden cursor-pointer"
-            aria-label="Abrir panel de navegación y documentos"
-            title="Abrir menú"
-          >
-            <Menu className="w-5 h-5 text-slate-200" />
-          </button>
-        )}
-
         <div className="p-1.5 sm:p-2 bg-gradient-to-tr from-indigo-600 to-blue-500 rounded-xl shadow-md text-white shrink-0">
           <Cpu className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
