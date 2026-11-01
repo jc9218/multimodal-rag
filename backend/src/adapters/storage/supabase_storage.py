@@ -213,7 +213,12 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
                 response.raise_for_status()
                 for item in response.json():
                     if isinstance(item, dict) and item.get("name"):
-                        object_paths.append(f"{prefix}{item['name']}")
+                        item_name = str(item["name"]).lstrip("/")
+                        object_paths.append(
+                            item_name
+                            if item_name.startswith(prefix)
+                            else f"{prefix}{item_name}"
+                        )
 
             if object_paths:
                 response = httpx.post(

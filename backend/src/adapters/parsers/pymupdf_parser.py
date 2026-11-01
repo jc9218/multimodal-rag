@@ -45,6 +45,7 @@ class PyMuPDFParser(DocumentParserPort):
         fitz.TOOLS.store_shrink(100)
         release_memory()
         doc = fitz.open(file_path)
+        page_count = len(doc)
         try:
             # Extract human-readable document filename safely with os imported
             raw_fname = os.path.basename(file_path)
@@ -73,7 +74,7 @@ class PyMuPDFParser(DocumentParserPort):
             scanned_pages_failed = 0
 
             # Pass 1: Extract all embedded images (handling multiple occurrences / all rects per xref)
-            for page_idx in range(len(doc)):
+            for page_idx in range(page_count):
                 page_num = page_idx + 1
                 page = doc[page_idx]
                 page_images_map[page_num] = []
@@ -83,8 +84,8 @@ class PyMuPDFParser(DocumentParserPort):
                 saved_image_count = 0
                 if progress_callback:
                     progress_callback(
-                        (page_num - 1) / len(doc) * 0.5,
-                        f"Página {page_num}/{len(doc)}: extrayendo imágenes y recursos visuales...",
+                        (page_num - 1) / page_count * 0.5,
+                        f"Página {page_num}/{page_count}: extrayendo imágenes y recursos visuales...",
                     )
 
                 image_list = page.get_images(full=True)
@@ -200,7 +201,7 @@ class PyMuPDFParser(DocumentParserPort):
                     "Visual extraction page=%s/%s duration=%.2fs resources=%s occurrences=%s "
                     "decoded=%s saved=%s",
                     page_num,
-                    len(doc),
+                    page_count,
                     time.perf_counter() - image_started,
                     len(image_list),
                     usable_image_count,
@@ -209,8 +210,8 @@ class PyMuPDFParser(DocumentParserPort):
                 )
                 if progress_callback:
                     progress_callback(
-                        (page_num / len(doc)) * 0.5,
-                        f"Página {page_num}/{len(doc)}: recursos visuales extraídos "
+                        (page_num / page_count) * 0.5,
+                        f"Página {page_num}/{page_count}: recursos visuales extraídos "
                         f"({saved_image_count} imágenes).",
                     )
                 fitz.TOOLS.store_shrink(100)
@@ -219,17 +220,17 @@ class PyMuPDFParser(DocumentParserPort):
             # Pass 2: Extract text blocks, tables, and perform spatial correlation
             all_chunks: List[Chunk] = []
 
-            for page_idx in range(len(doc)):
+            for page_idx in range(page_count):
                 page_num = page_idx + 1
                 page = doc[page_idx]
                 page_chunk_start = len(all_chunks)
                 page_imgs = page_images_map.get(page_num, [])
-                logger.info("Extracting page %s/%s", page_num, len(doc))
+                logger.info("Extracting page %s/%s", page_num, page_count)
                 page_started = time.perf_counter()
                 if progress_callback:
                     progress_callback(
-                        0.5 + ((page_num - 1) / len(doc) * 0.5),
-                        f"Página {page_num}/{len(doc)}: extrayendo texto y tablas...",
+                        0.5 + ((page_num - 1) / page_count * 0.5),
+                        f"Página {page_num}/{page_count}: extrayendo texto y tablas...",
                     )
 
                 # --- 2.1 Structured Table Extraction via page.find_tables() ---
@@ -298,13 +299,13 @@ class PyMuPDFParser(DocumentParserPort):
                     )
                     if progress_callback:
                         progress_callback(
-                            0.5 + ((page_num - 1) / len(doc) * 0.5),
-                            f"Página {page_num}/{len(doc)}: ejecutando OCR "
+                            0.5 + ((page_num - 1) / page_count * 0.5),
+                            f"Página {page_num}/{page_count}: ejecutando OCR "
                             f"({self.ocr_dpi} DPI)...",
                         )
                     try:
                         ocr_started = time.perf_counter()
-                        logger.info("Running OCR for page %s/%s", page_num, len(doc))
+                        logger.info("Running OCR for page %s/%s", page_num, page_count)
                         tp = page.get_textpage_ocr(language="spa+eng", dpi=self.ocr_dpi, full=True)
                         ocr_blocks = page.get_text("blocks", textpage=tp)
                         if ocr_blocks:
@@ -313,7 +314,7 @@ class PyMuPDFParser(DocumentParserPort):
                         ocr_elapsed = time.perf_counter() - ocr_started
                         logger.info(
                             "OCR completed page=%s/%s duration=%.2fs blocks=%s dpi=%s",
-                            page_num, len(doc), ocr_elapsed, len(text_blocks), self.ocr_dpi,
+                            page_num, page_count, ocr_elapsed, len(text_blocks), self.ocr_dpi,
                         )
                     except Exception as ocr_err:
                         logger.warning(
@@ -374,7 +375,7 @@ class PyMuPDFParser(DocumentParserPort):
                             render_elapsed = time.perf_counter() - render_started
                             logger.info(
                                 "Scanned page render completed page=%s/%s duration=%.2fs bytes=%s",
-                                page_num, len(doc), render_elapsed, img_len,
+                                page_num, page_count, render_elapsed, img_len,
                             )
                         except Exception as render_err:
                             if not scan_skipped_for_size:
@@ -509,15 +510,15 @@ class PyMuPDFParser(DocumentParserPort):
                 if page_callback:
                     page_callback(
                         page_num,
-                        len(doc),
+                        page_count,
                         all_chunks[page_chunk_start:],
                         page_imgs,
                     )
                     del all_chunks[page_chunk_start:]
                 if progress_callback:
                     progress_callback(
-                        0.5 + (page_num / len(doc)) * 0.5,
-                        f"Página {page_num}/{len(doc)} completada: "
+                        0.5 + (page_num / page_count) * 0.5,
+                        f"Página {page_num}/{page_count} completada: "
                         f"{len(all_chunks)} fragmentos acumulados.",
                     )
                 fitz.TOOLS.store_shrink(100)
@@ -527,7 +528,7 @@ class PyMuPDFParser(DocumentParserPort):
                     "native_chars=%s tables=%s text=%.2fs tables_time=%.2fs ocr=%.2fs "
                     "render=%.2fs chunks_total=%s",
                     page_num,
-                    len(doc),
+                    page_count,
                     time.perf_counter() - page_started,
                     len(text_blocks),
                     native_text_len,
@@ -559,7 +560,7 @@ class PyMuPDFParser(DocumentParserPort):
             "scanned_pages_failed=%s limits={max_image_mb:%s,max_images:%s}",
             document_id,
             doc_name,
-            len(doc),
+            page_count,
             len(all_chunks),
             len(all_images),
             embedded_resources_detected,
