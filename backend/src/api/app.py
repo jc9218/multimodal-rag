@@ -62,6 +62,13 @@ def _recover_interrupted_jobs() -> None:
                     message="El procesamiento se interrumpió durante un despliegue y el archivo ya no está disponible.",
                     error="Persisted upload missing during restart recovery.",
                 )
+                try:
+                    app_container.storage.delete_document_files(job.document_id)
+                except Exception:
+                    logger.exception(
+                        "[startup] Failed to purge remote artifacts for unrecoverable job "
+                        f"job_id={job.job_id} document_id={job.document_id}"
+                    )
                 continue
 
             logger.info(

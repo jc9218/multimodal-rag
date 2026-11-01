@@ -58,6 +58,19 @@ class PyMuPDFParser(DocumentParserPort):
             all_images: List[ExtractedImage] = []
             page_images_map: dict[int, List[ExtractedImage]] = {}
             max_image_bytes = settings.MAX_EXTRACTED_IMAGE_MB * 1024 * 1024
+            embedded_resources_detected = 0
+            embedded_occurrences_detected = 0
+            embedded_resources_decoded = 0
+            embedded_occurrences_saved = 0
+            skipped_oversized_resources = 0
+            skipped_oversized_occurrences = 0
+            skipped_limit_resources = 0
+            skipped_limit_occurrences = 0
+            failed_resources = 0
+            failed_occurrences = 0
+            scanned_pages_saved = 0
+            scanned_pages_skipped_oversized = 0
+            scanned_pages_failed = 0
 
             # Pass 1: Extract all embedded images (handling multiple occurrences / all rects per xref)
             for page_idx in range(len(doc)):
@@ -75,6 +88,7 @@ class PyMuPDFParser(DocumentParserPort):
                     )
 
                 image_list = page.get_images(full=True)
+                embedded_resources_detected += len(image_list)
                 for img_idx, img_info in enumerate(image_list):
                     xref = img_info[0]
                     rects = page.get_image_rects(xref)
@@ -91,6 +105,7 @@ class PyMuPDFParser(DocumentParserPort):
                         except Exception:
                             usable_rects = [fitz.Rect(0, 0, page.rect.width, page.rect.height)]
                     usable_image_count += len(usable_rects)
+                    embedded_occurrences_detected += len(usable_rects)
 
                     try:
                         extract_started = time.perf_counter()
@@ -99,7 +114,10 @@ class PyMuPDFParser(DocumentParserPort):
                         image_bytes = extracted.get("image")
                         image_ext = extracted.get("ext", "png")
                         extracted_image_count += 1
+                        embedded_resources_decoded += 1
                         if len(image_bytes or b"") > max_image_bytes:
+                            skipped_oversized_resources += 1
+                            skipped_oversized_occurrences += len(usable_rects)
                             logger.warning(
                                 "Skipping oversized image page=%s xref=%s bytes=%s limit=%s",
                                 page_num,
@@ -109,6 +127,11 @@ class PyMuPDFParser(DocumentParserPort):
                             )
                             continue
                         if len(all_images) >= settings.MAX_IMAGES_PER_DOCUMENT:
+                            skipped_limit_resources += len(image_list) - img_idx
+                            skipped_limit_occurrences += len(usable_rects) + sum(
+                                len(page.get_image_rects(remaining[0]))
+                                for remaining in image_list[img_idx + 1 :]
+                            )
                             logger.warning(
                                 "Skipping remaining images document_id=%s limit=%s",
                                 document_id,
@@ -163,10 +186,13 @@ class PyMuPDFParser(DocumentParserPort):
 
                             all_images.append(img_obj)
                             page_images_map[page_num].append(img_obj)
+                            embedded_occurrences_saved += 1
                         del image_bytes
                         del extracted
 
                     except Exception as exc:
+                        failed_resources += 1
+                        failed_occurrences += len(usable_rects)
                         logger.warning(
                             f"Failed to extract image xref={xref} on page {page_num}: {exc}"
                         )
@@ -295,6 +321,7 @@ class PyMuPDFParser(DocumentParserPort):
                         )
 
                     if not page_imgs:
+                        scan_skipped_for_size = False
                         try:
                             render_started = time.perf_counter()
                             # Use grayscale without alpha channel to cut pixmap memory consumption by 75%
@@ -302,6 +329,8 @@ class PyMuPDFParser(DocumentParserPort):
                             img_bytes = pix.tobytes("png")
                             img_len = len(img_bytes)
                             if img_len > max_image_bytes:
+                                scan_skipped_for_size = True
+                                scanned_pages_skipped_oversized += 1
                                 logger.warning(
                                     "Skipping oversized scanned page image page=%s bytes=%s limit=%s",
                                     page_num,
@@ -339,6 +368,7 @@ class PyMuPDFParser(DocumentParserPort):
                             )
                             all_images.append(scan_img)
                             page_imgs.append(scan_img)
+                            scanned_pages_saved += 1
                             del img_bytes
                             del pix
                             render_elapsed = time.perf_counter() - render_started
@@ -347,6 +377,8 @@ class PyMuPDFParser(DocumentParserPort):
                                 page_num, len(doc), render_elapsed, img_len,
                             )
                         except Exception as render_err:
+                            if not scan_skipped_for_size:
+                                scanned_pages_failed += 1
                             logger.warning(
                                 f"Could not render scanned page snapshot on page {page_num}: {render_err}"
                             )
@@ -516,6 +548,34 @@ class PyMuPDFParser(DocumentParserPort):
             release_memory()
 
         logger.info(
-            f"Successfully parsed doc {document_id}: {len(all_chunks)} chunks, {len(all_images)} images"
+            "Document processing summary document_id=%s document_name=%s pages=%s "
+            "chunks_saved=%s images_saved=%s "
+            "embedded_resources_detected=%s embedded_occurrences_detected=%s "
+            "embedded_resources_decoded=%s embedded_occurrences_saved=%s "
+            "skipped_oversized_resources=%s skipped_oversized_occurrences=%s "
+            "skipped_limit_resources=%s skipped_limit_occurrences=%s "
+            "failed_resources=%s failed_occurrences=%s "
+            "scanned_pages_saved=%s scanned_pages_skipped_oversized=%s "
+            "scanned_pages_failed=%s limits={max_image_mb:%s,max_images:%s}",
+            document_id,
+            doc_name,
+            len(doc),
+            len(all_chunks),
+            len(all_images),
+            embedded_resources_detected,
+            embedded_occurrences_detected,
+            embedded_resources_decoded,
+            embedded_occurrences_saved,
+            skipped_oversized_resources,
+            skipped_oversized_occurrences,
+            skipped_limit_resources,
+            skipped_limit_occurrences,
+            failed_resources,
+            failed_occurrences,
+            scanned_pages_saved,
+            scanned_pages_skipped_oversized,
+            scanned_pages_failed,
+            settings.MAX_EXTRACTED_IMAGE_MB,
+            settings.MAX_IMAGES_PER_DOCUMENT,
         )
         return all_chunks, all_images

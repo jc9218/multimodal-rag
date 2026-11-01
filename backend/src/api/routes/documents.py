@@ -102,6 +102,12 @@ async def upload_document(
         dest_path = app_container.storage.save_upload(safe_filename, file.file)
         total_bytes = os.path.getsize(dest_path)
     except UploadSizeExceededError:
+        try:
+            app_container.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception(
+                "[DocumentsRoute:upload_document] Failed to clean storage after upload size rejection."
+            )
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"El archivo supera el límite permitido de {MAX_FILE_SIZE // (1024 * 1024)} MB.",
@@ -135,6 +141,12 @@ async def upload_document(
         ) from exc
     except Exception as exc:
         logger.error("[DocumentsRoute:upload_document] Could not persist uploaded file.", exc_info=True)
+        try:
+            app_container.storage.delete_document_files(document_id)
+        except Exception:
+            logger.exception(
+                "[DocumentsRoute:upload_document] Failed to clean storage after upload failure."
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No se pudo guardar el archivo. Intenta nuevamente.",
