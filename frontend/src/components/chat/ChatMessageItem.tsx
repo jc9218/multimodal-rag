@@ -15,6 +15,18 @@ interface ChatMessageItemProps {
   message: Message;
 }
 
+// Objetivo: Detectar citas de fuente renderizadas como párrafos independientes.
+// Entradas: hijos generados por ReactMarkdown.
+// Salida: true cuando el párrafo solo contiene una cita inline.
+function isInlineSourceCitation(children: React.ReactNode): boolean {
+  const text = React.Children.toArray(children)
+    .map((child) => (typeof child === "string" ? child : ""))
+    .join("")
+    .trim();
+
+  return /^\[Fuente:\s*.+,\s*Pág\.\s*\d+\]$/.test(text);
+}
+
 export default function ChatMessageItem({ message }: ChatMessageItemProps) {
   const isUser = message.sender === "user";
 
@@ -51,7 +63,23 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
             )}
 
             <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-table:text-xs overflow-x-auto break-words">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children, ...props }) => (
+                    <p
+                      {...props}
+                      className={
+                        isInlineSourceCitation(children)
+                          ? "text-[11px] italic text-slate-400 mt-1 mb-0"
+                          : undefined
+                      }
+                    >
+                      {children}
+                    </p>
+                  ),
+                }}
+              >
                 {message.text}
               </ReactMarkdown>
             </div>
