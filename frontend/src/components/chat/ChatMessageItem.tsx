@@ -49,6 +49,18 @@ function renderTextWithInlineSources(children: React.ReactNode): React.ReactNode
 
 export default function ChatMessageItem({ message }: ChatMessageItemProps) {
   const isUser = message.sender === "user";
+  const relatedImages = message.responseMeta
+    ? Array.from(
+        new Map(
+          [
+            ...(message.responseMeta.images || []),
+            ...(message.responseMeta.sources || []).flatMap(
+              (source) => source.associated_images || [],
+            ),
+          ].map((image) => [image.id, image]),
+        ).values(),
+      )
+    : [];
 
   return (
     <div
@@ -106,9 +118,7 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
             </div>
 
             {/* Multimodal Schematics / Associated Technical Images */}
-            {message.responseMeta?.images && message.responseMeta.images.length > 0 && (
-              <MultimodalImagesView images={message.responseMeta.images} />
-            )}
+            {relatedImages.length > 0 && <MultimodalImagesView images={relatedImages} />}
 
             {/* Sources Metadata Badges (Grouped & Deduplicated by document) */}
             {message.responseMeta?.sources && message.responseMeta.sources.length > 0 && (
