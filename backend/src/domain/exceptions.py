@@ -20,6 +20,13 @@ class JobNotFoundError(DomainError):
     pass
 
 
+# Clase: JobCancelledError.
+# Entradas: configuración, dependencias o datos definidos por sus atributos.
+# Salida: instancia que encapsula el comportamiento o modelo indicado.
+class JobCancelledError(DomainError):
+    pass
+
+
 # Clase: IngestionError.
 # Entradas: configuración, dependencias o datos definidos por sus atributos.
 # Salida: instancia que encapsula el comportamiento o modelo indicado.

@@ -7,6 +7,7 @@ import time
 from src.infrastructure.config import settings
 from src.infrastructure.memory import get_process_memory_mb, release_memory
 from src.domain.models import JobStatusEnum
+from src.domain.exceptions import JobCancelledError
 from src.ports.document_parser_port import DocumentParserPort
 from src.ports.job_repository_port import JobRepositoryPort
 from src.ports.llm_port import LLMPort
@@ -89,7 +90,7 @@ class IngestDocumentUseCase:
 
     def _is_quota_error(self, exc: Exception) -> bool:
         """Detects rate limits, quota exhaustion or 429 from LLM providers."""
-        err = str(exc).lower()
+        err = f"{exc} {getattr(exc, '__cause__', '')}".lower()
         return any(
             k in err
             for k in [
@@ -98,15 +99,18 @@ class IngestDocumentUseCase:
                 "quota",
                 "rate limit",
                 "rate_limit",
+                "ratelimit",
                 "too many requests",
+                "exhausted",
             ]
         )
 
     def _extract_retry_delay(self, exc: Exception, default_seconds: int = 40) -> int:
         """Parses the recommended retry delay from error messages if present."""
+        text = f"{exc} {getattr(exc, '__cause__', '')}"
         match = re.search(
-            r"retry(?:\s+in\s+|Delay['\":\s]+)(\d+(?:\.\d+)?)",
-            str(exc),
+            r"(?:retry(?:\s+in\s+|\s+after\s+|Delay['\":\s]+)|seconds:\s*)(\d+(?:\.\d+)?)",
+            text,
             re.IGNORECASE,
         )
         if match:
@@ -142,6 +146,41 @@ class IngestDocumentUseCase:
             message="Cuota restablecida. Reanudando procesamiento...",
         )
         return True
+
+    def _generate_embeddings_with_quota_retry(
+        self,
+        job_id: str,
+        texts: list,
+        progress: float,
+        max_quota_retries: int = 6,
+    ) -> list:
+        """
+        Generates dense embeddings for a batch of texts with resilient quota backoff.
+        If a rate limit or quota exhaustion error occurs (HTTP 429, ResourceExhausted),
+        pauses the job in WAITING_QUOTA status with a live countdown and retries up to
+        max_quota_retries times before giving up.
+        Raises JobCancelledError if the user cancels during wait.
+        """
+        quota_attempts = 0
+        while True:
+            if self._is_cancelled(job_id):
+                raise JobCancelledError(f"Job {job_id} was cancelled by user.")
+            try:
+                return self.llm.generate_embeddings(texts)
+            except Exception as exc:
+                if self._is_quota_error(exc) and quota_attempts < max_quota_retries:
+                    quota_attempts += 1
+                    delay = self._extract_retry_delay(exc, default_seconds=38)
+                    logger.warning(
+                        f"[IngestDocumentUseCase] Job {job_id}: Quota limit encountered "
+                        f"(attempt {quota_attempts}/{max_quota_retries}). Waiting {delay}s for quota window reset."
+                    )
+                    can_continue = self._wait_for_quota_recovery(job_id, delay, progress)
+                    if not can_continue:
+                        logger.info(f"[IngestDocumentUseCase] Job {job_id} cancelled while waiting for quota.")
+                        raise JobCancelledError(f"Job {job_id} was cancelled by user.")
+                    continue
+                raise
 
     def execute_async(self, job_id: str, file_path: str, document_id: str) -> None:
         """
@@ -204,6 +243,8 @@ class IngestDocumentUseCase:
                     page_chunks: list,
                     page_images: list,
                 ) -> None:
+                    if self._is_cancelled(job_id):
+                        raise JobCancelledError(f"Job {job_id} was cancelled by user.")
                     incremental_state["called"] = True
                     for chunk in page_chunks:
                         chunk.metadata["document_name"] = doc_name
@@ -212,11 +253,18 @@ class IngestDocumentUseCase:
                     if hasattr(self.vector_store, "register_images"):
                         self.vector_store.register_images(page_images)
 
+                    cur_progress = round(0.35 + 0.63 * (page_num - 1) / max(total_pages, 1), 2)
                     for start in range(0, len(page_chunks), settings.EMBEDDING_BATCH_SIZE):
                         batch = page_chunks[start : start + settings.EMBEDDING_BATCH_SIZE]
-                        embeddings = self.llm.generate_embeddings([c.text for c in batch])
+                        batch_texts = [c.text for c in batch]
+                        embeddings = self._generate_embeddings_with_quota_retry(
+                            job_id=job_id,
+                            texts=batch_texts,
+                            progress=cur_progress,
+                        )
                         for chunk, embedding in zip(batch, embeddings):
                             chunk.embedding = embedding
+
                     indexed = self.vector_store.index_chunks(page_chunks)
                     incremental_state["indexed"] += indexed
                     release_memory()
@@ -317,30 +365,13 @@ class IngestDocumentUseCase:
 
                     batch_chunks = chunks[i : i + batch_size]
                     batch_texts = [c.text for c in batch_chunks]
-                    batch_embeddings = None
-                    max_quota_retries = 6
-                    quota_attempts = 0
-
-                    while batch_embeddings is None:
-                        try:
-                            batch_embeddings = self.llm.generate_embeddings(batch_texts)
-                        except Exception as batch_err:
-                            if self._is_quota_error(batch_err) and quota_attempts < max_quota_retries:
-                                quota_attempts += 1
-                                delay = self._extract_retry_delay(batch_err, default_seconds=38)
-                                logger.warning(
-                                    f"[IngestDocumentUseCase:execute_async] Job {job_id}: Quota limit encountered on batch {i} "
-                                    f"(attempt {quota_attempts}/{max_quota_retries}). Waiting {delay}s for quota window reset."
-                                )
-                                ratio = i / total_chunks
-                                cur_prog = round(0.35 + 0.35 * ratio, 2)
-                                can_continue = self._wait_for_quota_recovery(job_id, delay, cur_prog)
-                                if not can_continue:
-                                    logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} cancelled while waiting for quota.")
-                                    self._cleanup_failed_ingestion(document_id)
-                                    return
-                                continue
-                            raise
+                    ratio = i / total_chunks
+                    cur_prog = round(0.35 + 0.35 * ratio, 2)
+                    batch_embeddings = self._generate_embeddings_with_quota_retry(
+                        job_id=job_id,
+                        texts=batch_texts,
+                        progress=cur_prog,
+                    )
 
                     for chunk, embedding in zip(batch_chunks, batch_embeddings):
                         chunk.embedding = embedding
@@ -418,6 +449,10 @@ class IngestDocumentUseCase:
                     f"peak_rss_mb={_process_memory_mb()}"
                 )
 
+            except JobCancelledError:
+                logger.info(f"[IngestDocumentUseCase:execute_async] Job {job_id} was cancelled by user.")
+                self._cleanup_failed_ingestion(document_id)
+                return
             except Exception as exc:
                 err_raw = str(exc)
                 logger.error(

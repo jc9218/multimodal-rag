@@ -353,6 +353,162 @@ def test_ingest_document_use_case_quota_recovery(monkeypatch):
     assert mock_vector_store.index_chunks.call_count == 1
 
 
+def test_index_page_incremental_quota_recovery(monkeypatch):
+    """Validates that a 429 quota error during incremental page-by-page ingestion recovers and completes."""
+    import time
+    monkeypatch.setattr(time, "sleep", lambda x: None)
+
+    mock_parser = MagicMock()
+    mock_vector_store = MagicMock()
+    mock_llm = MagicMock()
+    mock_job_repo = MagicMock()
+
+    sample_bbox = BoundingBox(page=1, x0=10, y0=20, x1=100, y1=150)
+    sample_chunk = Chunk(
+        id="c_inc_quota",
+        document_id="doc_inc_quota",
+        text="Texto de la página 1 con diagrama",
+        page=1,
+        bbox=sample_bbox,
+    )
+
+    def side_effect_parse(file_path, document_id, progress_callback=None, page_callback=None):
+        if page_callback:
+            page_callback(1, 1, [sample_chunk], [])
+        return [], []
+
+    mock_parser.parse_pdf.side_effect = side_effect_parse
+
+    # First attempt in index_page throws 429, second attempt succeeds
+    mock_llm.generate_embeddings.side_effect = [
+        Exception("429 RESOURCE_EXHAUSTED Quota exceeded. Please retry after 1s"),
+        [[0.25] * 768],
+    ]
+    mock_vector_store.index_chunks.return_value = 1
+
+    use_case = IngestDocumentUseCase(
+        parser=mock_parser,
+        vector_store=mock_vector_store,
+        llm=mock_llm,
+        job_repo=mock_job_repo,
+    )
+
+    use_case.execute_async("job_inc_quota", "/tmp/inc_quota.pdf", "doc_inc_quota")
+
+    statuses = [call.kwargs.get("status") for call in mock_job_repo.update_job_status.call_args_list]
+    assert JobStatusEnum.WAITING_QUOTA in statuses
+    assert statuses[-1] == JobStatusEnum.COMPLETED
+    assert mock_vector_store.index_chunks.call_count == 1
+
+
+def test_quota_exhaustion_max_retries_fails(monkeypatch):
+    """Validates that when quota errors persist beyond max_quota_retries, the job fails gracefully."""
+    import time
+    monkeypatch.setattr(time, "sleep", lambda x: None)
+
+    mock_parser = MagicMock()
+    mock_vector_store = MagicMock()
+    mock_llm = MagicMock()
+    mock_job_repo = MagicMock()
+
+    sample_bbox = BoundingBox(page=1, x0=10, y0=20, x1=100, y1=150)
+    sample_chunk = Chunk(
+        id="c_fail_quota",
+        document_id="doc_fail_quota",
+        text="Texto que falla por cuota",
+        page=1,
+        bbox=sample_bbox,
+    )
+
+    def side_effect_parse(file_path, document_id, progress_callback=None, page_callback=None):
+        if page_callback:
+            page_callback(1, 1, [sample_chunk], [])
+        return [], []
+
+    mock_parser.parse_pdf.side_effect = side_effect_parse
+
+    # Generate embeddings consistently raises 429 quota error
+    mock_llm.generate_embeddings.side_effect = Exception("429 RESOURCE_EXHAUSTED Quota exceeded")
+
+    use_case = IngestDocumentUseCase(
+        parser=mock_parser,
+        vector_store=mock_vector_store,
+        llm=mock_llm,
+        job_repo=mock_job_repo,
+    )
+
+    use_case.execute_async("job_fail_quota", "/tmp/fail_quota.pdf", "doc_fail_quota")
+
+    statuses = [call.kwargs.get("status") for call in mock_job_repo.update_job_status.call_args_list]
+    assert JobStatusEnum.WAITING_QUOTA in statuses
+    assert statuses[-1] == JobStatusEnum.FAILED
+    last_update = mock_job_repo.update_job_status.call_args_list[-1]
+    assert "límite de solicitudes por minuto" in last_update.kwargs.get("message", "").lower()
+    # Ensure vector store cleaned up partial data
+    mock_vector_store.delete_document.assert_called_once_with("doc_fail_quota")
+
+
+def test_quota_wait_user_cancellation(monkeypatch):
+    """Validates that cancelling a job while waiting for quota recovery halts execution immediately."""
+    import time
+    monkeypatch.setattr(time, "sleep", lambda x: None)
+
+    mock_parser = MagicMock()
+    mock_vector_store = MagicMock()
+    mock_llm = MagicMock()
+    mock_job_repo = MagicMock()
+
+    sample_bbox = BoundingBox(page=1, x0=10, y0=20, x1=100, y1=150)
+    sample_chunk = Chunk(
+        id="c_cancel",
+        document_id="doc_cancel",
+        text="Texto cancelado",
+        page=1,
+        bbox=sample_bbox,
+    )
+
+    def side_effect_parse(file_path, document_id, progress_callback=None, page_callback=None):
+        if page_callback:
+            page_callback(1, 1, [sample_chunk], [])
+        return [], []
+
+    mock_parser.parse_pdf.side_effect = side_effect_parse
+    mock_llm.generate_embeddings.side_effect = Exception("429 RESOURCE_EXHAUSTED Quota exceeded")
+
+    call_count = 0
+
+    def mock_get_job(job_id):
+        nonlocal call_count
+        call_count += 1
+        # On second query during wait, job status is CANCELLED
+        status = JobStatusEnum.CANCELLED if call_count >= 2 else JobStatusEnum.INDEXING
+        return IngestionJob(
+            job_id=job_id,
+            document_id="doc_cancel",
+            filename="cancel.pdf",
+            status=status,
+        )
+
+    mock_job_repo.get_job.side_effect = mock_get_job
+
+    use_case = IngestDocumentUseCase(
+        parser=mock_parser,
+        vector_store=mock_vector_store,
+        llm=mock_llm,
+        job_repo=mock_job_repo,
+    )
+
+    use_case.execute_async("job_cancel_during_quota", "/tmp/cancel.pdf", "doc_cancel")
+
+    statuses = [call.kwargs.get("status") for call in mock_job_repo.update_job_status.call_args_list]
+    # Job should not be marked as FAILED when cancelled
+    assert JobStatusEnum.FAILED not in statuses
+    # Vector store indexing should not be called
+    mock_vector_store.index_chunks.assert_not_called()
+    # Cleanup should be invoked
+    mock_vector_store.delete_document.assert_called_once_with("doc_cancel")
+
+
 def test_query_rag_retrieves_images_from_page_fallback():
     """Validates that if chunks lack direct image links, images from that page are still retrieved."""
     mock_vector_store = MagicMock()
