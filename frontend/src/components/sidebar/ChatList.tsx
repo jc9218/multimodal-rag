@@ -3,8 +3,8 @@
 import React from "react";
 import { MessageSquare, Plus, Trash2 } from "lucide-react";
 import { ChatSession } from "@/types/chat";
-
 // Data contract ChatListProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface ChatListProps {
@@ -14,9 +14,21 @@ interface ChatListProps {
   onCreateChat: () => void;
   onDeleteChat: (chatId: string, e: React.MouseEvent) => void;
 }
-
+/**
+ * ChatList function.
+ *
+ * @param {
+  chats - unknown.
+ * @param activeChatId - unknown.
+ * @param onSelectChat - unknown.
+ * @param onCreateChat - unknown.
+ * @param onDeleteChat - unknown.
+ * @param } - ChatListProps.
+ * @returns void.
+ */
 export default function ChatList({
   chats,
+
   activeChatId,
   onSelectChat,
   onCreateChat,
@@ -38,10 +50,10 @@ export default function ChatList({
           <span>Nuevo Chat</span>
         </button>
       </div>
-
       <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
         {chats.map((c) => {
           const isActive = c.id === activeChatId;
+
           return (
             <div
               key={c.id}
@@ -66,11 +78,11 @@ export default function ChatList({
                   </p>
                 </div>
               </div>
-
               <button
                 onClick={(e) => onDeleteChat(c.id, e)}
                 title="Eliminar este espacio"
                 className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 p-1 rounded transition shrink-0 cursor-pointer"
+
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

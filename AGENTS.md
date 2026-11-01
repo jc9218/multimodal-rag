@@ -8,6 +8,8 @@ This document specifies the architecture of agents and autonomous components tha
 - Review and update related documentation within the same task; do not leave functional changes unreflected in the README.
 - **Language Policy:** All repository documents must be in English, except for those displayed directly to the end-user, the README, and user-facing application texts (which remain in Spanish).
 - **Code Comment Policy:** All source-code comments, docstrings, inline documentation, and type-contract annotations must be written in English. Spanish is reserved for user-facing messages, prompts, and other application text intentionally shown to users.
+- **Function Documentation:** Every backend function and frontend named function/component must document its purpose, each input parameter and its type, and its return value and type. Keep documentation adjacent to the declaration and update it when the signature or behavior changes.
+- **Import Hygiene:** Do not leave unused imports, unused local assignments, or dead compatibility imports. Run the repository's import/lint checks after changing modules, and remove confirmed unused imports without hiding errors through broad suppressions.
 
 ## Engineering Invariants
 

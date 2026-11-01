@@ -4,8 +4,8 @@ import React from "react";
 import { Layers, Link as LinkIcon, X, Plus, Clock, FileText, BookOpen, Trash2 } from "lucide-react";
 import { IndexedDoc } from "@/types/chat";
 import { formatProcessedDate } from "@/lib/formatters";
-
 // Data contract ChatDocumentsProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface ChatDocumentsProps {
@@ -19,9 +19,25 @@ interface ChatDocumentsProps {
   onDetachDoc: (chatId: string, docId: string) => void;
   onDeleteDoc: (docId: string, docName: string) => void;
 }
-
+/**
+ * ChatDocuments function.
+ *
+ * @param {
+  activeChatTitle - unknown.
+ * @param activeChatId - unknown.
+ * @param activeChatDocs - unknown.
+ * @param otherAvailableDocs - unknown.
+ * @param showAttachMenu - unknown.
+ * @param onToggleAttachMenu - unknown.
+ * @param onAttachDoc - unknown.
+ * @param onDetachDoc - unknown.
+ * @param onDeleteDoc - unknown.
+ * @param } - ChatDocumentsProps.
+ * @returns void.
+ */
 export default function ChatDocuments({
   activeChatTitle,
+
   activeChatId,
   activeChatDocs,
   otherAvailableDocs,
@@ -38,10 +54,10 @@ export default function ChatDocuments({
           <Layers className="w-3.5 h-3.5 text-indigo-400" />
           <span>Documentos del Chat ({activeChatDocs.length})</span>
         </span>
-
         {otherAvailableDocs.length > 0 && (
           <button
             onClick={onToggleAttachMenu}
+
             className="text-[11px] text-indigo-300 hover:text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 rounded transition flex items-center space-x-1 cursor-pointer"
             title="Vincular otros documentos ya subidos a este chat"
           >
@@ -50,11 +66,11 @@ export default function ChatDocuments({
           </button>
         )}
       </div>
-
       {/* Menú flotante para vincular documentos existentes a este chat */}
       {showAttachMenu && otherAvailableDocs.length > 0 && (
         <div className="absolute top-12 left-4 right-4 bg-slate-900 border border-indigo-500/40 rounded-xl shadow-2xl p-3 z-30 space-y-1.5">
           <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
+
             <span className="font-semibold text-slate-200 truncate pr-2">
               Vincular a &quot;{activeChatTitle}&quot;
             </span>
@@ -90,17 +106,17 @@ export default function ChatDocuments({
           </div>
         </div>
       )}
-
       <p className="text-[11px] text-slate-400 mb-2">
         Documentos asociados exclusivamente a este espacio:
       </p>
-
       <div className="flex-1 overflow-y-auto space-y-1.5 pr-1">
         {activeChatDocs.length === 0 ? (
+
           <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs">
             <FileText className="w-8 h-8 mb-2 stroke-[1.5]" />
             <p>No hay documentos en este chat.</p>
             <p className="text-[11px] mt-1 text-slate-600">
+
               Sube un documento PDF arriba para agregarlo a este espacio.
             </p>
           </div>

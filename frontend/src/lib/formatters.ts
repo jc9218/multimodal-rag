@@ -9,10 +9,16 @@ export function cleanDocumentTitle(filename: string): string {
   // Keeps the chat name exactly equal to the file name without changing letter case.
   return filename;
 }
-
 // Purpose: formatProcessedDate.
+
 // Inputs: dateStr?: string.
 // Output: Value specified by the signature or operation effect.
+/**
+ * formatProcessedDate function..
+ *
+ * @param dateStr? - string.
+ * @returns string..
+ */
 export function formatProcessedDate(dateStr?: string): string {
   if (!dateStr) return "";
   try {

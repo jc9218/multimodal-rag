@@ -10,8 +10,8 @@ export interface Message {
   responseMeta?: QueryResponse;
   isError?: boolean;
 }
-
 // Data contract ChatSession.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 export interface ChatSession {
@@ -23,9 +23,9 @@ export interface ChatSession {
   createdAt: number;
   isCustomTitle?: boolean;
 }
-
 // Data contract IndexedDoc.
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
+
 // Output: Typed structure consumed by the corresponding interface.
 export interface IndexedDoc {
   id: string;

@@ -12,17 +12,17 @@ import {
   Zap,
   CheckCircle2,
 } from "lucide-react";
-
 // Data contract SkillsModalProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface SkillsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 // Data contract SkillItem.
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
+
 // Output: Typed structure consumed by the corresponding interface.
 interface SkillItem {
   icon: React.ReactNode;
@@ -32,10 +32,10 @@ interface SkillItem {
   algorithm: string;
   badge: string;
 }
-
 const SKILLS_LIST: SkillItem[] = [
   {
     icon: <Layers className="w-5 h-5 text-indigo-400" />,
+
     name: "Búsqueda Híbrida RRF (Dense + Sparse)",
     category: "Recuperación de Información",
     description:
@@ -89,15 +89,22 @@ const SKILLS_LIST: SkillItem[] = [
     badge: "No Bloqueante",
   },
 ];
-
+/**
+ * SkillsModal function.
+ *
+ * @param { isOpen - unknown.
+ * @param onClose } - SkillsModalProps.
+ * @returns void.
+ */
 export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+
       <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 gap-2">
+
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <div className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 shrink-0">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -123,13 +130,13 @@ export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
             <X className="w-5 h-5" />
           </button>
         </div>
-
         {/* Modal Content - Skills Cards */}
         <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {SKILLS_LIST.map((skill, idx) => (
               <div
                 key={idx}
+
                 className="bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/40 rounded-xl p-4 transition group flex flex-col justify-between space-y-2.5"
               >
                 <div>
@@ -152,7 +159,6 @@ export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
                     {skill.description}
                   </p>
                 </div>
-
                 <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
                   <code className="text-[10px] text-indigo-300/80 font-mono truncate max-w-[200px]">
                     {skill.algorithm}
@@ -160,13 +166,13 @@ export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
                   <span className="inline-flex items-center space-x-1 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-md font-medium shrink-0">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>{skill.badge}</span>
+
                   </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
         {/* Modal Footer */}
         <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-950/40 flex items-center justify-between text-xs text-slate-400">
           <span>Diseñado bajo principios de Arquitectura Limpia e Inversión de Dependencias (DIP)</span>
@@ -175,6 +181,7 @@ export default function SkillsModal({ isOpen, onClose }: SkillsModalProps) {
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-4 py-1.5 rounded-lg transition"
           >
             Entendido
+
           </button>
         </div>
       </div>

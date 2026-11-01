@@ -5,8 +5,8 @@ import { UploadCloud, AlertCircle, X } from "lucide-react";
 import { uploadDocument, getJobStatus, cancelJob, IngestionJob } from "@/lib/api";
 import FileDropzone from "./upload/FileDropzone";
 import IngestionProgressCard from "./upload/IngestionProgressCard";
-
 // Data contract UploadModalProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface UploadModalProps {
@@ -19,23 +19,31 @@ interface UploadModalProps {
   activeChatTitle?: string;
   activeChatId?: string;
 }
-
 const ACTIVE_INGESTION_JOB_KEY = "multimodal_rag_active_ingestion_job_v1";
-
 // Data contract PersistedJob.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
+
 interface PersistedJob {
   jobId: string;
   filename: string;
   targetChatId?: string;
   savedAt: number;
 }
-
 // Purpose: persistActiveJob.
 // Inputs: jobId: string, filename: string, targetChatId?: string.
 // Output: Value specified by the signature or operation effect.
+/**
+ * persistActiveJob function..
+ *
+ * @param jobId - string.
+ * @param filename - string.
+ * @param targetChatId? - string.
+ * @returns void..
+ */
 function persistActiveJob(jobId: string, filename: string, targetChatId?: string) {
+
   try {
     const data: PersistedJob = {
       jobId,
@@ -48,31 +56,43 @@ function persistActiveJob(jobId: string, filename: string, targetChatId?: string
     console.warn("Could not persist active ingestion job to localStorage:", e);
   }
 }
-
 // Purpose: clearPersistedJob.
 // Inputs: None.
 // Output: Value specified by the signature or operation effect.
+/**
+ * clearPersistedJob function..
+ *
+ * @returns void. */
 function clearPersistedJob() {
   try {
+
     localStorage.removeItem(ACTIVE_INGESTION_JOB_KEY);
   } catch {}
 }
-
+/**
+ * UploadModal function.
+ *
+ * @param {
+  onDocumentIndexed - unknown.
+ * @param activeChatTitle - unknown.
+ * @param activeChatId - unknown.
+ * @param } - UploadModalProps.
+ * @returns void..
+ */
 export default function UploadModal({
   onDocumentIndexed,
   activeChatTitle,
   activeChatId,
 }: UploadModalProps) {
   const [uploading, setUploading] = useState(false);
+
   const [isCancelling, setIsCancelling] = useState(false);
   const [job, setJob] = useState<IngestionJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileQueue, setFileQueue] = useState<File[]>([]);
-
   const onDocumentIndexedRef = useRef(onDocumentIndexed);
   const activeChatIdRef = useRef(activeChatId);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     onDocumentIndexedRef.current = onDocumentIndexed;
     activeChatIdRef.current = activeChatId;
@@ -82,12 +102,13 @@ export default function UploadModal({
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) {
+
         clearInterval(pollIntervalRef.current);
       }
     };
   }, []);
-
   // Auto-dismiss completed status card after 5 seconds if no more files in queue
+
   useEffect(() => {
     if (job?.status === "COMPLETED" && fileQueue.length === 0) {
       const timer = setTimeout(() => {
@@ -96,20 +117,19 @@ export default function UploadModal({
       return () => clearTimeout(timer);
     }
   }, [job?.status, fileQueue.length]);
-
   // Restore any in-progress ingestion job from localStorage after reload/close
+
   useEffect(() => {
     try {
       const savedRaw = localStorage.getItem(ACTIVE_INGESTION_JOB_KEY);
       if (!savedRaw) return;
       const saved: PersistedJob = JSON.parse(savedRaw);
-
       if (!saved?.jobId || Date.now() - (saved.savedAt || 0) > 2 * 60 * 60 * 1000) {
         clearPersistedJob();
         return;
       }
-
       setUploading(true);
+
       setJob({
         job_id: saved.jobId,
         document_id: "",
@@ -117,14 +137,14 @@ export default function UploadModal({
         status: "PENDING",
         progress: 0.1,
         message: "Recuperando estado del procesamiento...",
-      });
 
+      });
       pollJob(saved.jobId, saved.targetChatId);
     } catch (e) {
       console.warn("Could not restore active ingestion job from localStorage:", e);
     }
-  }, []);
 
+  }, []);
   // Purpose: handleCancelUpload.
   // Inputs: None.
   // Output: Value specified by the signature or operation effect.
@@ -152,32 +172,32 @@ export default function UploadModal({
       setTimeout(() => setError(null), 4000);
     } catch (err: any) {
       console.error("🚨 [UploadModal:handleCancelUpload] Error al cancelar trabajo:", err);
+
       setError("No se pudo cancelar el procesamiento del documento.");
     } finally {
       setIsCancelling(false);
     }
   };
-
   // Purpose: processNextInQueue.
   // Inputs: remainingQueue: File[].
+
   // Output: Value specified by the signature or operation effect.
   const processNextInQueue = async (remainingQueue: File[]) => {
     if (remainingQueue.length === 0) {
       setUploading(false);
       return;
     }
-
     const [nextFile, ...rest] = remainingQueue;
     setFileQueue(rest);
     await startSingleUpload(nextFile, rest);
   };
-
   // Purpose: startSingleUpload.
   // Inputs: targetFile: File, remainingFiles: File[] = [].
   // Output: Value specified by the signature or operation effect.
   const startSingleUpload = async (targetFile: File, remainingFiles: File[] = []) => {
     try {
       setUploading(true);
+
       setError(null);
       setJob({
         job_id: "init",
@@ -193,6 +213,7 @@ export default function UploadModal({
       persistActiveJob(res.job_id, targetFile.name, currentTargetChatId);
       pollJob(res.job_id, currentTargetChatId, remainingFiles);
     } catch (err: any) {
+
       clearPersistedJob();
       console.error("🚨 [UploadModal:startSingleUpload] Error al subir archivo:", {
         fileName: targetFile.name,
@@ -209,11 +230,11 @@ export default function UploadModal({
         processNextInQueue(remainingFiles);
       } else {
         setUploading(false);
+
         setJob(null);
       }
     }
   };
-
   // Purpose: handleFilesSelected.
   // Inputs: files: File[].
   // Output: Value specified by the signature or operation effect.
@@ -223,7 +244,6 @@ export default function UploadModal({
     setFileQueue(rest);
     startSingleUpload(first, rest);
   };
-
   const pollJob = (
     jobId: string,
     targetChatId?: string,
@@ -233,23 +253,22 @@ export default function UploadModal({
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
-
     let consecutiveErrors = 0;
-
     // Purpose: checkStatus.
     // Inputs: None.
     // Output: Value specified by the signature or operation effect.
+
     const checkStatus = async () => {
       try {
         const currentJob = await getJobStatus(jobId);
         consecutiveErrors = 0;
         setJob(currentJob);
-
         if (currentJob.status === "COMPLETED") {
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
           }
+
           clearPersistedJob();
           const createdAt =
             (currentJob as any).created_at || new Date().toISOString();
@@ -259,10 +278,11 @@ export default function UploadModal({
             createdAt,
             targetChatId || activeChatIdRef.current
           );
-
           // Process next file in queue if any
+
           if (remainingFiles.length > 0) {
             processNextInQueue(remainingFiles);
+
           } else {
             setUploading(false);
           }
@@ -272,6 +292,7 @@ export default function UploadModal({
             pollIntervalRef.current = null;
           }
           clearPersistedJob();
+
           console.error("🚨 [UploadModal:pollJob] Trabajo de ingesta falló en el backend:", {
             jobId,
             error: currentJob.error,
@@ -287,6 +308,7 @@ export default function UploadModal({
           if (pollIntervalRef.current) {
             clearInterval(pollIntervalRef.current);
             pollIntervalRef.current = null;
+
           }
           clearPersistedJob();
           setUploading(false);
@@ -305,7 +327,6 @@ export default function UploadModal({
           setJob(null);
           return;
         }
-
         consecutiveErrors += 1;
         // In Render free tier, server can take ~50s to spin up; tolerate up to 50 attempts (~60s)
         if (consecutiveErrors < 50) {
@@ -331,12 +352,11 @@ export default function UploadModal({
         }
       }
     };
-
     // Execute immediate check then start interval
     checkStatus();
     pollIntervalRef.current = setInterval(checkStatus, 1200);
-  };
 
+  };
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
       <div className="flex items-center space-x-3 mb-4">
@@ -352,7 +372,6 @@ export default function UploadModal({
           </p>
         </div>
       </div>
-
       <div className="space-y-4">
         <FileDropzone
           uploading={uploading}
@@ -362,18 +381,18 @@ export default function UploadModal({
             setTimeout(() => setError(null), 5000);
           }}
         />
-
         {job && (
+
           <IngestionProgressCard
             job={job}
             queueCount={fileQueue.length}
             uploading={uploading}
             isCancelling={isCancelling}
+
             onCancel={handleCancelUpload}
             onDismiss={() => setJob(null)}
           />
         )}
-
         {error && (
           <div className="flex items-center justify-between text-rose-300 text-xs bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg animate-in fade-in duration-150">
             <div className="flex items-center space-x-2 mr-2">
@@ -386,6 +405,7 @@ export default function UploadModal({
             >
               <X className="w-3.5 h-3.5" />
             </button>
+
           </div>
         )}
       </div>

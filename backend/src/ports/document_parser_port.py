@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
+
 from typing import Callable, List, Optional, Tuple
+
 from src.domain.models import Chunk, ExtractedImage
 
-
 # Class: DocumentParserPort.
+
 # Inputs: Configuration, dependencies, or data defined by its attributes.
+
 # Output: Instance encapsulating the specified behavior or model.
+
+
 class DocumentParserPort(ABC):
     @abstractmethod
     def parse_pdf(
@@ -18,8 +23,13 @@ class DocumentParserPort(ABC):
         ] = None,
     ) -> Tuple[List[Chunk], List[ExtractedImage]]:
         """
+
         Parses a PDF file extracting text chunks with layout/bounding boxes,
+
         extracts embedded images with page coordinates, and correlates each chunk
+
         with its closest spatial images.
+
         """
+
         pass

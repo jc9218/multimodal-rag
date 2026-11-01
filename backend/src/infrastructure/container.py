@@ -1,39 +1,74 @@
 import logging
+
 from src.adapters.job_repository.redis_job_repository import RedisJobRepository
+
 from src.adapters.llm.llm_factory import LLMFactory
+
 from src.adapters.parsers.pymupdf_parser import PyMuPDFParser
+
 from src.adapters.storage.local_storage import LocalStorageAdapter
+
 from src.adapters.storage.supabase_storage import SupabaseStorageAdapter
+
 from src.adapters.vector_db.vector_store_factory import VectorStoreFactory
+
 from src.application.delete_document import DeleteDocumentUseCase
+
 from src.application.get_job_status import GetJobStatusUseCase
+
 from src.application.ingest_document import IngestDocumentUseCase
+
 from src.application.query_rag import QueryRAGUseCase
+
 from src.application.upload_document import UploadDocumentUseCase
+
 from src.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
 
-
 # Class: Container.
+
 # Inputs: Configuration, dependencies, or data defined by its attributes.
+
 # Output: Instance encapsulating the specified behavior or model.
+
+
 class Container:
     """
+
     Dependency Injection Container.
+
     Composes the system by injecting interfaces (Ports) into Use Cases.
+
     Supports swapping any LLM (Gemini, OpenAI, Ollama) or Vector Database via Factories.
+
     """
 
     # Purpose: Init.
+
     # Inputs: self.
+
     # Output: Operation result, or None when no value is returned.
+
     def __init__(self):
+        """init.
+
+        Args:
+
+            None.
+
+        Returns:
+
+            unspecified..
+
+        """
+
         logger.info(
             f"Initializing Dependency Injection Container [LLM: {settings.LLM_PROVIDER}, VectorStore: {settings.VECTOR_STORE_PROVIDER}]..."
         )
 
         # 1. Storage & Job Repository (Persistent Redis with in-memory fallback)
+
         if settings.STORAGE_PROVIDER.lower() == "supabase":
             self.storage = SupabaseStorageAdapter(
                 base_storage_path=settings.STORAGE_PATH,
@@ -41,20 +76,26 @@ class Container:
                 service_role_key=settings.SUPABASE_SERVICE_ROLE_KEY,
                 bucket=settings.SUPABASE_STORAGE_BUCKET,
             )
+
         else:
             self.storage = LocalStorageAdapter(base_storage_path=settings.STORAGE_PATH)
+
         self.job_repo = RedisJobRepository(redis_url=settings.REDIS_URL)
 
         # 2. Document Parser (Multimodal + Spatial)
+
         self.parser = PyMuPDFParser(storage=self.storage, ocr_dpi=settings.OCR_DPI)
 
         # 3. LLM Provider (Injected via Factory: Gemini, OpenAI, Ollama)
+
         self.llm = LLMFactory.create(settings)
 
         # 4. Vector Store (Injected via Factory: Qdrant, Chroma)
+
         self.vector_store = VectorStoreFactory.create(settings)
 
         # 5. Core Application Use Cases (Guaranteed 100% decoupling from 3rd party providers)
+
         self.ingest_use_case = IngestDocumentUseCase(
             parser=self.parser,
             vector_store=self.vector_store,
@@ -87,4 +128,5 @@ container = Container()
 
 def get_container() -> Container:
     """FastAPI Dependency Injection provider for Container."""
+
     return container

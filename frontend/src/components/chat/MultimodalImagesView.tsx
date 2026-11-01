@@ -3,23 +3,29 @@
 import React, { useState } from "react";
 import { Image as ImageIcon, Maximize2, X } from "lucide-react";
 import { ExtractedImage, getFullImageUrl } from "@/lib/api";
-
 // Data contract MultimodalImagesViewProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface MultimodalImagesViewProps {
   images: ExtractedImage[];
 }
-
+/**
+ * MultimodalImagesView function.
+ *
+ * @param { images } - MultimodalImagesViewProps.
+ * @returns void.
+ */
 export default function MultimodalImagesView({ images }: MultimodalImagesViewProps) {
   const [zoomedImage, setZoomedImage] = useState<ExtractedImage | null>(null);
 
   if (!images || images.length === 0) return null;
-
   return (
     <div className="mt-4 pt-3 border-t border-slate-700/60">
+
       <div className="flex items-center space-x-2 text-xs font-semibold text-indigo-300 mb-2">
         <ImageIcon className="w-4 h-4 text-indigo-400" />
+
         <span>Diagramas Técnicos Correlacionados Espacialmente:</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -50,12 +56,12 @@ export default function MultimodalImagesView({ images }: MultimodalImagesViewPro
           </div>
         ))}
       </div>
-
       {/* Lightbox / Modal de ampliación */}
       {zoomedImage && (
         <div
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
           onClick={() => setZoomedImage(null)}
+
         >
           <div
             className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative"

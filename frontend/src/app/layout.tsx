@@ -11,16 +11,26 @@ export const metadata: Metadata = {
     ],
   },
 };
-
 export const viewport: Viewport = {
+
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   themeColor: "#020617",
 };
-
+/**
+ * RootLayout function.
+ *
+ * @param {
+  children - unknown.
+ * @param } - {
+  children: React.ReactNode;
+}.
+ * @returns void.
+ */
 export default function RootLayout({
   children,
+
 }: {
   children: React.ReactNode;
 }) {

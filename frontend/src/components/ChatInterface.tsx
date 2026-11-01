@@ -6,8 +6,8 @@ import { ChatSession, IndexedDoc, Message } from "@/types/chat";
 import ChatHeader from "./chat/ChatHeader";
 import ChatMessageList from "./chat/ChatMessageList";
 import ChatInput from "./chat/ChatInput";
-
 // Data contract: ChatInterfaceProps.
+
 // Inputs: active chat, indexed documents, message and chat manipulation callbacks, optional sidebar toggle.
 // Output: Main chat viewport component.
 interface ChatInterfaceProps {
@@ -20,9 +20,23 @@ interface ChatInterfaceProps {
   onDeleteDoc?: (docId: string, docName: string) => void;
   onToggleSidebar?: () => void;
 }
-
+/**
+ * ChatInterface function.
+ *
+ * @param {
+  chat - unknown.
+ * @param allIndexedDocs - unknown.
+ * @param onUpdateMessages - unknown.
+ * @param onRenameChat - unknown.
+ * @param onToggleDoc - unknown.
+ * @param onClearChat - unknown.
+ * @param onToggleSidebar - unknown.
+ * @param } - ChatInterfaceProps.
+ * @returns void.
+ */
 export default function ChatInterface({
   chat,
+
   allIndexedDocs,
   onUpdateMessages,
   onRenameChat,
@@ -31,37 +45,36 @@ export default function ChatInterface({
   onToggleSidebar,
 }: ChatInterfaceProps) {
   const [loading, setLoading] = useState(false);
-
   const hasAttachedDocs = Boolean(chat.documentIds && chat.documentIds.length > 0);
-
   // Purpose: handleSendMessage.
   // Inputs: userQuery: string.
+
   // Output: Value specified by the signature or operation effect.
   const handleSendMessage = async (userQuery: string) => {
-    if (!hasAttachedDocs || loading) return;
 
+    if (!hasAttachedDocs || loading) return;
     const targetChatId = chat.id;
     const userMessage: Message = {
       id: Date.now().toString(),
       sender: "user",
       text: userQuery,
-    };
 
+    };
     const updatedWithUser = [...chat.messages, userMessage];
     onUpdateMessages(targetChatId, updatedWithUser);
     setLoading(true);
     let assistantMessage: Message | null = null;
-
     try {
       // Build conversational context history (last 6 turns, omitting welcome message)
+
       const chatHistory = updatedWithUser
         .filter((m) => m.id !== "initial-welcome")
         .slice(-6)
         .map((m) => ({
           role: m.sender,
+
           content: m.text,
         }));
-
       const result = await queryRAG(
         userQuery,
         undefined,
@@ -69,22 +82,23 @@ export default function ChatInterface({
         chatHistory,
         120000 // 120s timeout allowing for Render cold start (~50s) + inference
       );
-
       const rawAnswer = result?.answer?.trim();
+
       const finalText =
         rawAnswer ||
         "No se pudo generar una respuesta detallada con los documentos actuales. Por favor intenta reformular tu pregunta.";
-
       assistantMessage = {
         id: (Date.now() + 1).toString(),
         sender: "assistant",
         text: finalText,
         responseMeta: result,
+
       };
     } catch (err: any) {
       console.error(
         "🚨 [ChatInterface:handleSendMessage] Error al procesar consulta RAG:",
         {
+
           chatId: targetChatId,
           chatTitle: chat.title,
           documentIds: chat.documentIds,
@@ -95,7 +109,6 @@ export default function ChatInterface({
       const raw = err?.message || "";
       let friendlyText =
         "No fue posible procesar tu consulta técnica en este momento. Por favor, intenta de nuevo en unos momentos.";
-
       if (raw.includes("tardó") || raw.includes("timeout") || raw.includes("TIMEOUT")) {
         friendlyText =
           "La respuesta está tardando más de lo esperado. Por favor, intenta nuevamente en unos momentos.";
@@ -107,6 +120,7 @@ export default function ChatInterface({
         raw.includes("LLM") ||
         raw.includes("completion")
       ) {
+
         friendlyText =
           "No fue posible generar la respuesta en este momento. Por favor, intenta nuevamente.";
       } else if (raw.includes("vector") || raw.includes("base de datos")) {
@@ -120,7 +134,6 @@ export default function ChatInterface({
       ) {
         friendlyText = "No fue posible completar la consulta. Por favor, intenta nuevamente.";
       }
-
       assistantMessage = {
         id: (Date.now() + 1).toString(),
         sender: "assistant",
@@ -133,6 +146,7 @@ export default function ChatInterface({
           id: (Date.now() + 1).toString(),
           sender: "assistant",
           text: "Hubo una pausa temporal en el procesamiento. Por favor reintenta tu pregunta.",
+
           isError: true,
         };
       }
@@ -140,7 +154,6 @@ export default function ChatInterface({
       setLoading(false);
     }
   };
-
   return (
     <div className="flex flex-col h-full bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
       <ChatHeader
@@ -154,6 +167,7 @@ export default function ChatInterface({
       <ChatMessageList messages={chat.messages} loading={loading} />
       <ChatInput
         chatTitle={chat.title}
+
         hasAttachedDocs={hasAttachedDocs}
         loading={loading}
         onSendMessage={handleSendMessage}

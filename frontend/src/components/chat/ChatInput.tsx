@@ -2,8 +2,8 @@
 
 import React, { useState } from "react";
 import { Send, Loader2 } from "lucide-react";
-
 // Data contract ChatInputProps.
+
 // Inputs: Properties, callbacks, or dependencies declared by the contract.
 // Output: Typed structure consumed by the corresponding interface.
 interface ChatInputProps {
@@ -12,18 +12,29 @@ interface ChatInputProps {
   loading: boolean;
   onSendMessage: (query: string) => void;
 }
-
+/**
+ * ChatInput function.
+ *
+ * @param {
+  chatTitle - unknown.
+ * @param hasAttachedDocs - unknown.
+ * @param loading - unknown.
+ * @param onSendMessage - unknown.
+ * @param } - ChatInputProps.
+ * @returns void.
+ */
 export default function ChatInput({
   chatTitle,
+
   hasAttachedDocs,
   loading,
   onSendMessage,
 }: ChatInputProps) {
   const [input, setInput] = useState("");
-
   // Purpose: handleSubmit.
   // Inputs: e: React.FormEvent.
   // Output: Value specified by the signature or operation effect.
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
@@ -31,11 +42,11 @@ export default function ChatInput({
     setInput("");
     onSendMessage(trimmed);
   };
-
   return (
     <form
       onSubmit={handleSubmit}
       className="p-2.5 sm:p-4 border-t border-slate-800 bg-slate-900/90 flex items-center space-x-2 sm:space-x-3 shrink-0"
+
     >
       <input
         type="text"

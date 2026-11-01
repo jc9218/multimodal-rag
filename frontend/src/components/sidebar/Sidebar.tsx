@@ -6,8 +6,8 @@ import { ChatSession, IndexedDoc } from "@/types/chat";
 import UploadModal from "../UploadModal";
 import ChatList from "./ChatList";
 import ChatDocuments from "./ChatDocuments";
-
 // Data contract: SidebarProps.
+
 // Inputs: sessions, documents, selection and attachment callbacks, mobile drawer state.
 // Output: Dual-mode responsive component (persistent desktop sidebar + sliding mobile drawer).
 interface SidebarProps {
@@ -33,9 +33,32 @@ interface SidebarProps {
   onDetachDoc: (chatId: string, docId: string) => void;
   onDeleteDoc: (docId: string, docName: string) => void;
 }
-
+/**
+ * Sidebar function.
+ *
+ * @param {
+  chats - unknown.
+ * @param activeChat - unknown.
+ * @param activeChatId - unknown.
+ * @param activeChatDocs - unknown.
+ * @param otherAvailableDocs - unknown.
+ * @param showAttachMenu - unknown.
+ * @param isMobileOpen = false - unknown.
+ * @param onCloseMobile - unknown.
+ * @param onDocumentIndexed - unknown.
+ * @param onSelectChat - unknown.
+ * @param onCreateChat - unknown.
+ * @param onDeleteChat - unknown.
+ * @param onToggleAttachMenu - unknown.
+ * @param onAttachDoc - unknown.
+ * @param onDetachDoc - unknown.
+ * @param onDeleteDoc - unknown.
+ * @param } - SidebarProps.
+ * @returns void.
+ */
 export default function Sidebar({
   chats,
+
   activeChat,
   activeChatId,
   activeChatDocs,
@@ -56,16 +79,16 @@ export default function Sidebar({
     onSelectChat(chatId);
     onCloseMobile?.();
   };
-
   const handleCreateChat = () => {
     onCreateChat();
     onCloseMobile?.();
-  };
 
+  };
   const sidebarContent = (
     <>
       {/* Upload PDF Section */}
       <UploadModal
+
         onDocumentIndexed={(docId, filename, createdAt, targetChatId) => {
           onDocumentIndexed(docId, filename, createdAt, targetChatId);
           onCloseMobile?.();
@@ -73,22 +96,22 @@ export default function Sidebar({
         activeChatTitle={activeChat ? activeChat.title : undefined}
         activeChatId={activeChat ? activeChat.id : activeChatId}
       />
-
       {/* Mis Chats Section */}
       <ChatList
         chats={chats}
         activeChatId={activeChatId}
         onSelectChat={handleSelectChat}
+
         onCreateChat={handleCreateChat}
         onDeleteChat={onDeleteChat}
       />
-
       {/* Documentos del Chat Activo */}
       <ChatDocuments
         activeChatTitle={activeChat ? activeChat.title : ""}
         activeChatId={activeChatId}
         activeChatDocs={activeChatDocs}
         otherAvailableDocs={otherAvailableDocs}
+
         showAttachMenu={showAttachMenu}
         onToggleAttachMenu={onToggleAttachMenu}
         onAttachDoc={onAttachDoc}
@@ -97,15 +120,14 @@ export default function Sidebar({
       />
     </>
   );
-
   return (
     <>
       {/* 1. Desktop Persistent Sidebar */}
       <aside className="hidden lg:flex w-80 xl:w-[22rem] flex-col space-y-4 shrink-0 overflow-hidden">
         {sidebarContent}
       </aside>
-
       {/* 2. Mobile Responsive Slide-Over Drawer */}
+
       <div
         className={`fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
           isMobileOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -123,6 +145,7 @@ export default function Sidebar({
         aria-label="Panel de navegación de chats y documentos"
       >
         <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-800 shrink-0">
+
           <div className="flex items-center space-x-2">
             <div className="p-1.5 bg-indigo-600/30 text-indigo-400 rounded-lg">
               <FolderKanban className="w-4 h-4" />

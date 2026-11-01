@@ -1,65 +1,154 @@
 import json
+
 import logging
+
 from typing import Dict, List, Optional
+
 import redis
+
 from src.domain.exceptions import JobNotFoundError
+
 from src.domain.models import IngestionJob, JobStatusEnum
+
 from src.ports.job_repository_port import JobRepositoryPort
 
 logger = logging.getLogger(__name__)
 
-
 # Class: RedisJobRepository.
+
 # Inputs: Configuration, dependencies, or data defined by its attributes.
+
 # Output: Instance encapsulating the specified behavior or model.
+
+
 class RedisJobRepository(JobRepositoryPort):
     """
+
     Persistent Job Repository backed by Redis.
+
     Guarantees job persistence across server restarts and horizontal scaling.
+
     Falls back to in-memory dictionary if Redis is unreachable (e.g. in standalone unit tests).
+
     """
 
     # Purpose: Init.
+
     # Inputs: self, redis_url, ttl_seconds.
+
     # Output: Operation result, or None when no value is returned.
-    def __init__(self, redis_url: str = "redis://localhost:6379/0", ttl_seconds: int = 86400):
+
+    def __init__(
+        self, redis_url: str = "redis://localhost:6379/0", ttl_seconds: int = 86400
+    ):
+        """init.
+
+        Args:
+
+            redis_url: str, ttl_seconds: int.
+
+        Returns:
+
+            unspecified..
+
+        """
+
         self.redis_url = redis_url
+
         self.ttl_seconds = ttl_seconds
+
         self._memory_fallback: Dict[str, IngestionJob] = {}
+
         self._redis_client: Optional[redis.Redis] = None
 
         try:
-            client = redis.from_url(redis_url, decode_responses=True, socket_timeout=2.0)
+            client = redis.from_url(
+                redis_url, decode_responses=True, socket_timeout=2.0
+            )
+
             client.ping()
+
             self._redis_client = client
-            logger.info(f"Connected to Redis at {redis_url} for persistent ingestion jobs.")
+
+            logger.info(
+                f"Connected to Redis at {redis_url} for persistent ingestion jobs."
+            )
+
         except Exception as e:
             logger.warning(
                 f"Could not connect to Redis at {redis_url} ({e}). Using in-memory fallback for jobs."
             )
+
             self._redis_client = None
 
     # Purpose: Job key.
+
     # Inputs: self, job_id.
+
     # Output: str.
+
     def _job_key(self, job_id: str) -> str:
+        """job key.
+
+        Args:
+
+            job_id: str.
+
+        Returns:
+
+            str..
+
+        """
+
         return f"multimodal_rag:job:{job_id}"
 
     # Purpose: Is persistent.
+
     # Inputs: self.
+
     # Output: bool.
+
     @property
     def is_persistent(self) -> bool:
+        """Is persistent.
+
+        Args:
+
+            None.
+
+        Returns:
+
+            bool..
+
+        """
+
         return self._redis_client is not None
 
     # Purpose: Create job.
+
     # Inputs: self, document_id, filename.
+
     # Output: IngestionJob.
+
     def create_job(
         self, document_id: str, filename: str, upload_id: Optional[str] = None
     ) -> IngestionJob:
+        """Create job.
+
+        Args:
+
+            document_id: str, filename: str, upload_id: Optional[str].
+
+        Returns:
+
+            IngestionJob..
+
+        """
+
         import uuid
+
         job_id = f"job_{uuid.uuid4().hex[:12]}"
+
         job = IngestionJob(
             job_id=job_id,
             document_id=document_id,
@@ -73,43 +162,96 @@ class RedisJobRepository(JobRepositoryPort):
         if self._redis_client:
             try:
                 key = self._job_key(job_id)
+
                 self._redis_client.set(key, job.model_dump_json(), ex=self.ttl_seconds)
+
                 if upload_id:
                     self._redis_client.set(
                         self._upload_key(upload_id), job_id, ex=self.ttl_seconds
                     )
+
                 return job
+
             except Exception as e:
                 logger.error(f"Redis error creating job {job_id}: {e}")
 
         self._memory_fallback[job_id] = job
+
         return job
 
     def _upload_key(self, upload_id: str) -> str:
+        """upload key.
+
+        Args:
+
+            upload_id: str.
+
+        Returns:
+
+            str..
+
+        """
+
         return f"multimodal_rag:upload:{upload_id}"
 
     def get_job_by_upload_id(self, upload_id: str) -> Optional[IngestionJob]:
+        """Get job by upload id.
+
+        Args:
+
+            upload_id: str.
+
+        Returns:
+
+            Optional[IngestionJob]..
+
+        """
+
         if self._redis_client:
             try:
                 job_id = self._redis_client.get(self._upload_key(upload_id))
+
                 if job_id:
                     return self.get_job(job_id)
+
             except Exception as e:
                 logger.error(f"Redis error getting upload id {upload_id}: {e}")
+
         return next(
-            (job for job in self._memory_fallback.values() if job.upload_id == upload_id),
+            (
+                job
+                for job in self._memory_fallback.values()
+                if job.upload_id == upload_id
+            ),
             None,
         )
 
     # Purpose: Get job.
+
     # Inputs: self, job_id.
+
     # Output: IngestionJob.
+
     def get_job(self, job_id: str) -> IngestionJob:
+        """Get job.
+
+        Args:
+
+            job_id: str.
+
+        Returns:
+
+            IngestionJob..
+
+        """
+
         if self._redis_client:
             try:
                 data = self._redis_client.get(self._job_key(job_id))
+
                 if data:
                     return IngestionJob(**json.loads(data))
+
             except Exception as e:
                 logger.error(f"Redis error getting job {job_id}: {e}")
 
@@ -119,8 +261,11 @@ class RedisJobRepository(JobRepositoryPort):
         raise JobNotFoundError(f"Job '{job_id}' not found.")
 
     # Purpose: Update job status.
+
     # Inputs: self, job_id, status, progress, message, error.
+
     # Output: IngestionJob.
+
     def update_job_status(
         self,
         job_id: str,
@@ -129,39 +274,80 @@ class RedisJobRepository(JobRepositoryPort):
         message: str,
         error: Optional[str] = None,
     ) -> IngestionJob:
+        """Update job status.
+
+        Args:
+
+            job_id: str, status: JobStatusEnum, progress: float, message: str, error: Optional[str].
+
+        Returns:
+
+            IngestionJob..
+
+        """
+
         from datetime import datetime, timezone
 
         job = self.get_job(job_id)
+
         job.status = status
+
         job.progress = max(0.0, min(1.0, progress))
+
         job.message = message
+
         job.error = error
+
         job.updated_at = datetime.now(timezone.utc)
 
         if self._redis_client:
             try:
                 key = self._job_key(job_id)
+
                 self._redis_client.set(key, job.model_dump_json(), ex=self.ttl_seconds)
+
                 return job
+
             except Exception as e:
                 logger.error(f"Redis error updating job {job_id}: {e}")
 
         self._memory_fallback[job_id] = job
+
         return job
 
     # Purpose: List jobs.
+
     # Inputs: self.
+
     # Output: List[IngestionJob].
+
     def list_jobs(self) -> List[IngestionJob]:
+        """List jobs.
+
+        Args:
+
+            None.
+
+        Returns:
+
+            List[IngestionJob]..
+
+        """
+
         jobs = []
+
         if self._redis_client:
             try:
                 keys = self._redis_client.keys("multimodal_rag:job:*")
+
                 for k in keys:
                     data = self._redis_client.get(k)
+
                     if data:
                         jobs.append(IngestionJob(**json.loads(data)))
+
                 return jobs
+
             except Exception as e:
                 logger.error(f"Redis error listing jobs: {e}")
 
