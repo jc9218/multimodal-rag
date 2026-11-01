@@ -485,8 +485,7 @@ class QdrantAdapter(VectorStorePort):
                 points = []
                 total_chunks = len(chunks)
                 for index, c in enumerate(chunks, 1):
-                    if not c.embedding:
-                        continue
+                    vector = c.embedding if c.embedding else [0.0] * self.vector_dim
 
                     # Store full ExtractedImage metadata inside Qdrant payload
                     # so chunks can hydrate completely after restart
@@ -515,7 +514,7 @@ class QdrantAdapter(VectorStorePort):
                     points.append(
                         qmodels.PointStruct(
                             id=point_uuid,
-                            vector=c.embedding,
+                            vector=vector,
                             payload=payload,
                         )
                     )

@@ -161,10 +161,10 @@ flowchart TD
     4. Serialized restart recovery: interrupted ingestion jobs are recovered one by one with startup delay, preventing burst memory spikes on reboot.
     5. Single Uvicorn worker enforcement (`--workers 1`) to guarantee bounded container memory footprint.
   * Captures and retries transient errors: `RateLimitError` (HTTP 429), `APIConnectionError`, and `APITimeoutError`.
-  * **Ingestion Quota Recovery Protocol (`WAITING_QUOTA`):** If an embedding call during incremental page processing or batch processing encounters a quota limit or rate limit (HTTP 429, `RESOURCE_EXHAUSTED`, `RateLimitError`), the worker transitions the job to `WAITING_QUOTA` with real-time countdown messaging. It waits for the provider's quota window reset (default 38-40s) and retries up to `max_quota_retries = 6`. Ingestion never fails on transient rate limits unless all retries are exhausted. Supports user cancellation during backoff with automatic cleanup.
+  * **Ingestion Quota Recovery & BM25 Degradation Protocol (`WAITING_QUOTA`):** If an embedding call encounters a transient rate limit (HTTP 429 RPM), the worker transitions the job to `WAITING_QUOTA` with real-time countdown messaging, waiting up to 40s per retry for window reset. If a daily quota exhaustion limit is detected (e.g. 1000 requests/day, `free_tier_requests`, delay > 90s) or all retries are exhausted, the system automatically degrades to BM25 lexical indexing with zero-vectors in Qdrant, completing the upload in seconds and preventing job failure.
+  * **Batch Efficiency Protection:** `EMBEDDING_BATCH_SIZE=24` consolidates chunk embedding requests into compact calls, preventing small PDFs from exhausting provider RPM limits.
   * *Exponential Backoff with Jitter*:
     $$T_{\text{wait}} = \min(\text{max\_wait}, \text{multiplier} \cdot 2^{\text{attempt}})$$
-  * If embedding generation fails, automatically degrades to BM25 lexical search.
   * User-friendly contingency messages are always delivered in the chat interface.
 
 ---
@@ -183,12 +183,12 @@ flowchart TD
 
 ### 🧪 8. Testing & Quality Assurance Agent (`qa-test-agent`)
 * **Purpose:** Validate the complete unit test suite and ensure isolation through test doubles (Mocks).
-* **Code Components:** `backend/tests/unit/` (45 unit tests)
+* **Code Components:** `backend/tests/unit/` (47 unit tests)
 * **Evaluated Metrics:**
   * Zero live network calls during test execution.
   * Isolation of `LLMPort` and `VectorStorePort` via `unittest.mock.MagicMock`.
   * Verification of the Job state machine (`PENDING` $\to$ `COMPLETED`).
-  * Incremental and batched quota recovery with retry ceilings and cancellation validation (`test_use_cases.py`).
+  * Incremental and batched quota recovery with daily limit BM25 degradation and cancellation validation (`test_use_cases.py`).
   * Context and history character budget validation (`test_prompt_budget.py`).
   * Memory efficiency and cgroup trimming validation (`test_memory_efficiency.py`).
   * Prompt injection shielding and XML delimiter sanitization (`test_security.py`).

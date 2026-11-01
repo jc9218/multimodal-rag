@@ -361,8 +361,8 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
    * La ingesta guarda cada página en Qdrant al terminarla. Si Render reinicia el proceso, Redis conserva el job y la reanudación vuelve a procesar de forma idempotente las páginas ya guardadas, sin duplicar vectores; el progreso confirmado no depende de que la extracción completa llegue al final.
    * La subida web reintenta hasta 3 veces los fallos transitorios (Render despertándose, timeout, red, HTTP 408/425/429 y 5xx), con esperas de 2 y 5 segundos. Los errores de validación, tamaño o formato no se reintentan. Cada intento usa la misma clave `X-Upload-Id` para reutilizar el job si el servidor aceptó el archivo pero la respuesta se perdió.
    * Si aparece `Cannot recover job: upload is missing`, Redis conservó el estado del job pero el PDF no existe en `STORAGE_PATH/uploads`. Verifica el disco persistente, el `mount path` y que `STORAGE_PATH` apunte a ese montaje; ese archivo debe volver a subirse si ya fue eliminado por un despliegue anterior.
-   * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes pequeños (`EMBEDDING_BATCH_SIZE=6`, `QDRANT_UPSERT_BATCH_SIZE=6`) y BM25 mantiene un límite en memoria de `BM25_MAX_CHUNKS_IN_MEMORY=800`. Los datos completos permanecen en Qdrant.
-   * **Resiliencia ante Límites de Cuota de IA:** Si durante la generación de embeddings (tanto en el procesamiento página a página como por lotes) el proveedor de IA retorna error de cuota o límite de tasa (HTTP 429, `RESOURCE_EXHAUSTED`, `RateLimitError`), el trabajador no falla la subida; coloca el trabajo en estado `WAITING_QUOTA` mostrando una cuenta regresiva dinámica en tiempo real y reintenta de forma automática hasta 6 veces antes de declarar fallo. El usuario puede cancelar en cualquier momento durante la espera liberando los recursos de forma limpia.
+   * Para evitar picos de memoria durante PDFs grandes, embeddings y Qdrant usan lotes optimizados (`EMBEDDING_BATCH_SIZE=24`, `QDRANT_UPSERT_BATCH_SIZE=6`) y BM25 mantiene un límite en memoria de `BM25_MAX_CHUNKS_IN_MEMORY=800`. Los datos completos permanecen en Qdrant.
+   * **Resiliencia ante Límites de Cuota de IA:** Si durante la generación de embeddings el proveedor de IA retorna error de cuota por minuto (HTTP 429 RPM), el sistema pasa a estado `WAITING_QUOTA` con cuenta regresiva dinámica en tiempo real y espera acotada (máx 40s). Si se detecta agotamiento de cuota diaria (RPD / *requests per day exceeded*) o se agotan los reintentos, el sistema **no falla la subida ni bloquea al usuario**: degrada de forma transparente al índice léxico BM25 con vectores neutros en Qdrant, permitiendo completar la ingesta en segundos y consultar el documento normalmente.
    * La búsqueda léxica también indexa el nombre del documento. Las consultas sobre marca, fabricante, modelo, nombre o resumen activan una muestra document-scoped para no depender únicamente de la similitud vectorial.
 
 3. **Frontend (Vercel):**
@@ -379,11 +379,11 @@ CORS_ORIGINS=["http://localhost:3000", "https://*.vercel.app"]
 make test
 ```
 
-### Cobertura de las Pruebas (45 tests):
+### Cobertura de las Pruebas (47 tests):
 * `test_security.py`: Verificación de defensas contra Prompt Injection, neutralización de etiquetas XML y validación de límites de entrada.
 * `test_bounding_boxes.py`: Validación de coordenadas geométricas, intersecciones y cálculo de distancia euclidiana espacial.
 * `test_upload_storage.py`: Verificación de streaming binario de subida y eliminación segura en caso de exceso de tamaño.
-* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, checkpoints por página, OCR fallback, recuperación y reintentos automáticos ante errores de cuota 429 (`WAITING_QUOTA`) e imágenes recuperadas.
+* `test_use_cases.py`: Verificación del flujo de `IngestDocumentUseCase` y `QueryRAGUseCase` con aislamiento de interfaces, checkpoints por página, OCR fallback, recuperación de cuota transitoria (`WAITING_QUOTA`), degradación inmediata a BM25 ante cuota diaria e imágenes recuperadas.
 * `test_memory_efficiency.py`: Validación de recolección de basura, llamada segura a `malloc_trim(0)` e ingesta incremental con streaming de páginas.
 * `test_qdrant_images.py`: Pruebas de hidratación de imágenes extraídas, tokenización de nombres de documento y consultas de identidad.
 * `test_resilience.py`: Validación de reintentos exponenciales (*Exponential Backoff*), respuestas defensivas y omisión de presupuestos de pensamiento innecesarios.

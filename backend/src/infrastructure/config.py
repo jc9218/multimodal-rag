@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # limit to avoid exhausting web-process memory during PDF parsing.
     RESOURCE_PROFILE: str = "free"
     MAX_UPLOAD_SIZE_MB: int = 10
-    EMBEDDING_BATCH_SIZE: int = 6
+    EMBEDDING_BATCH_SIZE: int = 24
     QDRANT_UPSERT_BATCH_SIZE: int = 6
     BM25_MAX_CHUNKS_IN_MEMORY: int = 800
     RECOVER_INTERRUPTED_JOBS: bool = True

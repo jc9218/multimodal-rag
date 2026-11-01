@@ -4,6 +4,7 @@ import re
 import resource
 import threading
 import time
+from typing import Any, Dict, List, Optional
 from src.infrastructure.config import settings
 from src.infrastructure.memory import get_process_memory_mb, release_memory
 from src.domain.models import JobStatusEnum
@@ -105,7 +106,27 @@ class IngestDocumentUseCase:
             ]
         )
 
-    def _extract_retry_delay(self, exc: Exception, default_seconds: int = 40) -> int:
+    def _is_daily_quota_error(self, exc: Exception) -> bool:
+        """Detects if quota exhaustion is daily or plan-wide and cannot be resolved by waiting 30-45s."""
+        text = f"{exc} {getattr(exc, '__cause__', '')}".lower()
+        if any(
+            pattern in text
+            for pattern in (
+                "per day",
+                "requests per day",
+                "daily",
+                "free_tier_requests",
+                "exceeded your current quota",
+                "check your plan and billing",
+                "billing",
+                "insufficient_quota",
+            )
+        ):
+            return True
+        raw_delay = self._extract_retry_delay(exc, default_seconds=0)
+        return raw_delay > 90
+
+    def _extract_retry_delay(self, exc: Exception, default_seconds: int = 35) -> int:
         """Parses the recommended retry delay from error messages if present."""
         text = f"{exc} {getattr(exc, '__cause__', '')}"
         match = re.search(
@@ -115,7 +136,7 @@ class IngestDocumentUseCase:
         )
         if match:
             try:
-                return max(10, int(float(match.group(1))) + 3)
+                return max(5, int(float(match.group(1))) + 2)
             except Exception:
                 pass
         return default_seconds
@@ -152,13 +173,14 @@ class IngestDocumentUseCase:
         job_id: str,
         texts: list,
         progress: float,
-        max_quota_retries: int = 6,
+        incremental_state: Optional[dict] = None,
+        max_quota_retries: int = 3,
     ) -> list:
         """
         Generates dense embeddings for a batch of texts with resilient quota backoff.
-        If a rate limit or quota exhaustion error occurs (HTTP 429, ResourceExhausted),
-        pauses the job in WAITING_QUOTA status with a live countdown and retries up to
-        max_quota_retries times before giving up.
+        If a transient rate limit occurs (HTTP 429 RPM), pauses in WAITING_QUOTA and retries.
+        If a daily limit is reached or retries are exhausted, automatically degrades to
+        zero-vectors for BM25 lexical indexing so the document upload never fails.
         Raises JobCancelledError if the user cancels during wait.
         """
         quota_attempts = 0
@@ -168,18 +190,54 @@ class IngestDocumentUseCase:
             try:
                 return self.llm.generate_embeddings(texts)
             except Exception as exc:
-                if self._is_quota_error(exc) and quota_attempts < max_quota_retries:
-                    quota_attempts += 1
-                    delay = self._extract_retry_delay(exc, default_seconds=38)
+                if self._is_quota_error(exc):
+                    # Check if it's daily or non-transient quota
+                    if self._is_daily_quota_error(exc):
+                        logger.warning(
+                            f"[IngestDocumentUseCase] Job {job_id}: Daily embedding quota exceeded for provider. "
+                            "Gracefully falling back to BM25 lexical indexing."
+                        )
+                        if incremental_state is not None:
+                            incremental_state["degraded"] = True
+                        self.job_repo.update_job_status(
+                            job_id=job_id,
+                            status=JobStatusEnum.INDEXING,
+                            progress=progress,
+                            message="Cuota de embeddings agotada por hoy. Continuando con índice léxico BM25...",
+                        )
+                        dim = getattr(self.llm, "embedding_dim", settings.EMBEDDING_DIMENSION)
+                        return [[0.0] * dim for _ in texts]
+
+                    if quota_attempts < max_quota_retries:
+                        quota_attempts += 1
+                        raw_delay = self._extract_retry_delay(exc, default_seconds=30)
+                        delay = min(raw_delay, 40)
+                        logger.warning(
+                            f"[IngestDocumentUseCase] Job {job_id}: Quota limit encountered "
+                            f"(attempt {quota_attempts}/{max_quota_retries}). Waiting {delay}s for quota window reset."
+                        )
+                        can_continue = self._wait_for_quota_recovery(job_id, delay, progress)
+                        if not can_continue:
+                            logger.info(f"[IngestDocumentUseCase] Job {job_id} cancelled while waiting for quota.")
+                            raise JobCancelledError(f"Job {job_id} was cancelled by user.")
+                        continue
+
+                    # If all retries exhausted, degrade to BM25 rather than failing the upload!
                     logger.warning(
-                        f"[IngestDocumentUseCase] Job {job_id}: Quota limit encountered "
-                        f"(attempt {quota_attempts}/{max_quota_retries}). Waiting {delay}s for quota window reset."
+                        f"[IngestDocumentUseCase] Job {job_id}: Quota retries exhausted ({max_quota_retries}). "
+                        "Gracefully falling back to BM25 lexical indexing."
                     )
-                    can_continue = self._wait_for_quota_recovery(job_id, delay, progress)
-                    if not can_continue:
-                        logger.info(f"[IngestDocumentUseCase] Job {job_id} cancelled while waiting for quota.")
-                        raise JobCancelledError(f"Job {job_id} was cancelled by user.")
-                    continue
+                    if incremental_state is not None:
+                        incremental_state["degraded"] = True
+                    self.job_repo.update_job_status(
+                        job_id=job_id,
+                        status=JobStatusEnum.INDEXING,
+                        progress=progress,
+                        message="Límite de reintentos de cuota alcanzado. Continuando con índice léxico BM25...",
+                    )
+                    dim = getattr(self.llm, "embedding_dim", settings.EMBEDDING_DIMENSION)
+                    return [[0.0] * dim for _ in texts]
+
                 raise
 
     def execute_async(self, job_id: str, file_path: str, document_id: str) -> None:
@@ -261,6 +319,7 @@ class IngestDocumentUseCase:
                             job_id=job_id,
                             texts=batch_texts,
                             progress=cur_progress,
+                            incremental_state=incremental_state,
                         )
                         for chunk, embedding in zip(batch, embeddings):
                             chunk.embedding = embedding
@@ -300,11 +359,14 @@ class IngestDocumentUseCase:
                     del chunks
                     del images
                     release_memory()
-                    msg = (
-                        f"¡Documento listo! {incremental_state['indexed']} fragmentos preparados para consulta."
-                        if incremental_state["indexed"] > 0
-                        else "Documento procesado (no se detectó texto para indexar)."
-                    )
+                    if incremental_state.get("degraded"):
+                        msg = f"¡Documento listo! {incremental_state['indexed']} fragmentos indexados con búsqueda léxica (BM25) por cuota de IA."
+                    else:
+                        msg = (
+                            f"¡Documento listo! {incremental_state['indexed']} fragmentos preparados para consulta."
+                            if incremental_state["indexed"] > 0
+                            else "Documento procesado (no se detectó texto para indexar)."
+                        )
                     self.job_repo.update_job_status(
                         job_id=job_id,
                         status=JobStatusEnum.COMPLETED,
@@ -371,6 +433,7 @@ class IngestDocumentUseCase:
                         job_id=job_id,
                         texts=batch_texts,
                         progress=cur_prog,
+                        incremental_state=incremental_state,
                     )
 
                     for chunk, embedding in zip(batch_chunks, batch_embeddings):
@@ -435,11 +498,16 @@ class IngestDocumentUseCase:
                 release_memory()
 
                 # Step 4: Completion
+                msg = (
+                    f"¡Documento listo! {indexed_count} fragmentos indexados con búsqueda léxica (BM25) por cuota de IA."
+                    if incremental_state.get("degraded")
+                    else f"¡Documento listo! {indexed_count} fragmentos preparados para consulta."
+                )
                 self.job_repo.update_job_status(
                     job_id=job_id,
                     status=JobStatusEnum.COMPLETED,
                     progress=1.0,
-                    message=f"¡Documento listo! {indexed_count} fragmentos preparados para consulta.",
+                    message=msg,
                 )
                 self._cleanup_local_cache(document_id)
                 logger.info(

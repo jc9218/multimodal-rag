@@ -286,8 +286,8 @@ class GeminiAdapter(LLMPort):
     # Salida: List[List[float]].
     @retry(
         retry=retry_if_exception(_is_retryable_gemini_error),
-        wait=wait_random_exponential(multiplier=2, min=2, max=30),
-        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=1, max=4),
+        stop=stop_after_attempt(2),
         reraise=True,
     )
     def _call_gemini_embed(self, texts: List[str]) -> List[List[float]]:
