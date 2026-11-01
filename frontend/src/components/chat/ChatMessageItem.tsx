@@ -27,6 +27,26 @@ function isInlineSourceCitation(children: React.ReactNode): boolean {
   return /^\[Fuente:\s*.+,\s*Pág\.\s*\d+\]$/.test(text);
 }
 
+// Objetivo: Aplicar estilo solo a las citas incluidas dentro del texto.
+// Entradas: fragmentos de texto generados por ReactMarkdown.
+// Salida: fragmentos originales con las citas envueltas en un elemento estilizado.
+function renderTextWithInlineSources(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (child) => {
+    if (typeof child !== "string") return child;
+
+    const parts = child.split(/(\[Fuente:\s*.+?,\s*Pág\.\s*\d+\])/g);
+    return parts.map((part, index) =>
+      /^\[Fuente:\s*.+,\s*Pág\.\s*\d+\]$/.test(part) ? (
+        <span key={index} className="text-[11px] italic text-slate-400">
+          {part}
+        </span>
+      ) : (
+        part
+      ),
+    );
+  });
+}
+
 export default function ChatMessageItem({ message }: ChatMessageItemProps) {
   const isUser = message.sender === "user";
 
@@ -66,6 +86,7 @@ export default function ChatMessageItem({ message }: ChatMessageItemProps) {
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
+                  text: ({ children }) => renderTextWithInlineSources(children),
                   p: ({ children, ...props }) => (
                     <p
                       {...props}
