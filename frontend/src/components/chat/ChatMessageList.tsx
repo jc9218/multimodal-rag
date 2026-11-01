@@ -5,9 +5,9 @@ import { Bot, Sparkles, Loader2 } from "lucide-react";
 import { Message } from "@/types/chat";
 import ChatMessageItem from "./ChatMessageItem";
 
-// Clase: contrato de datos ChatMessageListProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract ChatMessageListProps.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 interface ChatMessageListProps {
   messages: Message[];
   loading: boolean;

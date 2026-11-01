@@ -7,6 +7,21 @@ This document specifies the architecture of agents and autonomous components tha
 - Keep the [README.md](./README.md) updated whenever functionality, configuration, environment variables, commands, architecture, deployment, tests, or user-facing behavior are modified.
 - Review and update related documentation within the same task; do not leave functional changes unreflected in the README.
 - **Language Policy:** All repository documents must be in English, except for those displayed directly to the end-user, the README, and user-facing application texts (which remain in Spanish).
+- **Code Comment Policy:** All source-code comments, docstrings, inline documentation, and type-contract annotations must be written in English. Spanish is reserved for user-facing messages, prompts, and other application text intentionally shown to users.
+
+## Engineering Invariants
+
+These rules are mandatory when changing ingestion, storage, parsing, retrieval, or user-facing behavior:
+
+- **Document lifecycle:** Treat the PDF, extracted images, temporary files, vector records, job state, and remote objects as one document lifecycle. Any upload, parsing, indexing, cancellation, or recovery failure must attempt to remove every artifact associated with the `document_id`.
+- **Cleanup must be best-effort and observable:** Cleanup failures must never hide the original error. Log the original failure and each cleanup failure with the `document_id`, job ID when available, storage provider, and artifact category.
+- **Remote storage paths:** Supabase Storage deletion must use the exact object paths returned by the listing API. Never concatenate a prefix with a name that already contains that prefix. Cleanup must cover both `uploads/{document_id}_*` and `images/{document_id}/*`.
+- **Idempotency:** Upload retries must reuse the same `X-Upload-Id`; page checkpoints and vector writes must use deterministic identifiers so retries do not duplicate jobs, chunks, or images.
+- **PDF resource lifetime:** Capture immutable document metadata such as page count before closing a PyMuPDF document. Never access a closed document from final summaries, error handlers, callbacks, or logging.
+- **Extraction observability:** Every completed parse must emit a document summary with pages, chunks, detected and saved images, skipped images grouped by reason, failed resources, scanned-page fallbacks, configured limits, duration, and peak memory when available.
+- **Memory safety:** Preserve sequential ingestion, bounded batches, image-size/count limits, explicit temporary-file cleanup, and memory release after page, embedding, and indexing stages. Do not remove a limit without measuring its effect against the deployment memory budget.
+- **User-facing errors:** Keep technical provider names, URLs, exception traces, and implementation details in server logs only. User-facing messages must explain whether upload, processing, cancellation, or querying succeeded or failed in plain language.
+- **Documentation and validation:** Update [README.md](./README.md) and this file when behavior or configuration changes. Run the smallest relevant tests, compilation/type checks, lint, build, and `git diff --check` before considering the change complete.
 
 ---
 

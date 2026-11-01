@@ -17,9 +17,9 @@ logging.basicConfig(
 logger = logging.getLogger("multimodal-rag")
 
 
-# Objetivo: Recover interrupted jobs.
-# Entradas: Ninguna..
-# Salida: None.
+# Purpose: Recover interrupted jobs.
+# Inputs: None.
+# Output: None.
 def _recover_interrupted_jobs() -> None:
     from src.infrastructure.container import get_container
     from src.domain.models import JobStatusEnum
@@ -91,9 +91,9 @@ def _recover_interrupted_jobs() -> None:
     ).start()
 
 
-# Objetivo: Lifespan.
-# Entradas: _.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Lifespan.
+# Inputs: _.
+# Output: Operation result, or None when no value is returned.
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.RECOVER_INTERRUPTED_JOBS:
@@ -113,9 +113,9 @@ app = FastAPI(
 )
 
 # Global exception handler to log any unhandled error with full stack trace and location
-# Objetivo: Global exception handler.
-# Entradas: request, exc.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Global exception handler.
+# Inputs: request, exc.
+# Output: Operation result, or None when no value is returned.
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(
@@ -143,9 +143,9 @@ app.include_router(documents_router)
 app.include_router(chat_router)
 
 
-# Objetivo: Health check.
-# Entradas: Ninguna..
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Health check.
+# Inputs: None.
+# Output: Operation result, or None when no value is returned.
 @app.get("/health", tags=["Health"])
 def health_check():
     return {

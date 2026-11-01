@@ -2,23 +2,23 @@ const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const API_BASE_URL = rawApiUrl.replace(/\/+$/, "");
 const UPLOAD_RETRY_DELAYS_MS = [2000, 5000];
 
-// Objetivo: esperar antes de repetir una operación transitoria.
-// Entradas: delayMs: milisegundos de espera.
-// Salida: promesa resuelta después del intervalo indicado.
+// Purpose: Wait before retrying a transient operation.
+// Inputs: delayMs: wait duration in milliseconds.
+// Output: Promise resolved after the specified interval.
 function wait(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
-// Objetivo: clasificar si un estado HTTP puede recuperarse reintentando.
-// Entradas: status: código HTTP recibido.
-// Salida: true para errores transitorios; false para errores definitivos.
+// Purpose: Classify whether an HTTP status can be recovered by retrying.
+// Inputs: status: received HTTP status code.
+// Output: True for transient errors; false for definitive errors.
 function isRetryableUploadStatus(status: number): boolean {
   return status === 408 || status === 425 || status === 429 || status >= 500;
 }
 
-// Objetivo: decidir si un error de subida puede reintentarse.
-// Entradas: error: error producido por fetch o por la respuesta HTTP.
-// Salida: true cuando la causa puede ser temporal.
+// Purpose: Decide whether an upload error can be retried.
+// Inputs: error: error produced by fetch or an HTTP response.
+// Output: True when the cause may be temporary.
 function isRetryableUploadError(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return true;
   const candidate = error as { status?: number; name?: string };
@@ -29,9 +29,9 @@ function isRetryableUploadError(error: unknown): boolean {
   );
 }
 
-// Clase: contrato de datos BoundingBox.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract BoundingBox.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface BoundingBox {
   page: number;
   x0: number;
@@ -40,9 +40,9 @@ export interface BoundingBox {
   y1: number;
 }
 
-// Clase: contrato de datos ExtractedImage.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract ExtractedImage.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface ExtractedImage {
   id: string;
   document_id: string;
@@ -55,9 +55,9 @@ export interface ExtractedImage {
   height_px: number;
 }
 
-// Clase: contrato de datos RetrievedChunk.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract RetrievedChunk.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface RetrievedChunk {
   chunk_id: string;
   document_id: string;
@@ -69,9 +69,9 @@ export interface RetrievedChunk {
   associated_images: ExtractedImage[];
 }
 
-// Clase: contrato de datos QueryResponse.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract QueryResponse.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface QueryResponse {
   query: string;
   answer: string;
@@ -80,9 +80,9 @@ export interface QueryResponse {
   is_defensive: boolean;
 }
 
-// Clase: contrato de datos IngestionJob.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract IngestionJob.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface IngestionJob {
   job_id: string;
   document_id: string;
@@ -93,9 +93,9 @@ export interface IngestionJob {
   error?: string;
 }
 
-// Objetivo: logApiRequest.
-// Entradas: method: string, endpoint: string, payload?: Record<string, unknown>.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: logApiRequest.
+// Inputs: method: string, endpoint: string, payload?: Record<string, unknown>.
+// Output: Value specified by the signature or operation effect.
 function logApiRequest(method: string, endpoint: string, payload?: Record<string, unknown>) {
   if (payload !== undefined) {
     console.log(`🚀 [Frontend API Request] ${method} ${endpoint}`, {
@@ -110,23 +110,23 @@ function logApiRequest(method: string, endpoint: string, payload?: Record<string
   }
 }
 
-// Objetivo: logApiResponse.
-// Entradas: method: string, endpoint: string, status: number | string, data: unknown.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: logApiResponse.
+// Inputs: method: string, endpoint: string, status: number | string, data: unknown.
+// Output: Value specified by the signature or operation effect.
 function logApiResponse(method: string, endpoint: string, status: number | string, data: unknown) {
   console.log(`📡 [Frontend API Response] ${status} ${method} ${endpoint}`);
 }
 
-// Objetivo: logApiError.
-// Entradas: endpoint: string, status: number | string, errorDetail: unknown.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: logApiError.
+// Inputs: endpoint: string, status: number | string, errorDetail: unknown.
+// Output: Value specified by the signature or operation effect.
 function logApiError(endpoint: string, status: number | string, errorDetail: unknown) {
   console.error(`🚨 [Frontend API Error] Endpoint: ${endpoint} | Status: ${status}`, errorDetail);
 }
 
-// Objetivo: checkHealth.
-// Entradas: Ninguna..
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: checkHealth.
+// Inputs: None.
+// Output: Value specified by the signature or operation effect.
 export async function checkHealth(): Promise<boolean> {
   const url = `${API_BASE_URL}/health`;
   try {
@@ -212,9 +212,9 @@ export async function uploadDocument(
   throw new Error("No fue posible subir el documento.");
 }
 
-// Objetivo: getJobStatus.
-// Entradas: jobId: string.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: getJobStatus.
+// Inputs: jobId: string.
+// Output: Value specified by the signature or operation effect.
 export async function getJobStatus(jobId: string): Promise<IngestionJob> {
   const url = `${API_BASE_URL}/api/v1/jobs/${jobId}`;
   try {
@@ -233,9 +233,9 @@ export async function getJobStatus(jobId: string): Promise<IngestionJob> {
   }
 }
 
-// Objetivo: cancelJob.
-// Entradas: jobId: string.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: cancelJob.
+// Inputs: jobId: string.
+// Output: Value specified by the signature or operation effect.
 export async function cancelJob(jobId: string): Promise<{ status: string; message: string }> {
   const url = `${API_BASE_URL}/api/v1/jobs/${jobId}/cancel`;
   logApiRequest("POST", url);
@@ -255,9 +255,9 @@ export async function cancelJob(jobId: string): Promise<{ status: string; messag
   }
 }
 
-// Clase: contrato de datos ChatHistoryPayload.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract ChatHistoryPayload.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 export interface ChatHistoryPayload {
   role: string;
   content: string;
@@ -317,9 +317,9 @@ export async function queryRAG(
   }
 }
 
-// Objetivo: getDocuments.
-// Entradas: Ninguna..
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: getDocuments.
+// Inputs: None.
+// Output: Value specified by the signature or operation effect.
 export async function getDocuments(): Promise<{ id: string; name: string; created_at?: string }[]> {
   const url = `${API_BASE_URL}/api/v1/documents`;
   try {
@@ -337,9 +337,9 @@ export async function getDocuments(): Promise<{ id: string; name: string; create
   }
 }
 
-// Objetivo: deleteDocument.
-// Entradas: documentId: string.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: deleteDocument.
+// Inputs: documentId: string.
+// Output: Value specified by the signature or operation effect.
 export async function deleteDocument(documentId: string): Promise<void> {
   const url = `${API_BASE_URL}/api/v1/documents/${documentId}`;
   logApiRequest("DELETE", url);
@@ -362,9 +362,9 @@ export async function deleteDocument(documentId: string): Promise<void> {
   }
 }
 
-// Objetivo: getFullImageUrl.
-// Entradas: relativeUrl: string.
-// Salida: valor indicado por la firma o efecto de la operación.
+// Purpose: getFullImageUrl.
+// Inputs: relativeUrl: string.
+// Output: Value specified by the signature or operation effect.
 export function getFullImageUrl(relativeUrl: string): string {
   if (!relativeUrl) return "";
   if (relativeUrl.startsWith("http")) return relativeUrl;

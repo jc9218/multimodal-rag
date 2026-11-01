@@ -22,9 +22,9 @@ router = APIRouter(prefix="/api/v1", tags=["Documents & Ingestion"])
 MAX_FILE_SIZE = settings.max_upload_size_bytes
 
 
-# Clase: UploadResponse.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: UploadResponse.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class UploadResponse(BaseModel):
     job_id: str
     document_id: str
@@ -32,9 +32,9 @@ class UploadResponse(BaseModel):
     message: str
 
 
-# Objetivo: Upload document.
-# Entradas: background_tasks, request, file, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Upload document.
+# Inputs: background_tasks, request, file, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.post(
     "/documents/upload",
     response_model=UploadResponse,
@@ -196,9 +196,9 @@ async def upload_document(
     )
 
 
-# Objetivo: Get job status.
-# Entradas: job_id, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Get job status.
+# Inputs: job_id, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.get(
     "/jobs/{job_id}",
     response_model=IngestionJob,
@@ -214,9 +214,9 @@ def get_job_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No se encontró el archivo solicitado.")
 
 
-# Objetivo: Cancel job.
-# Entradas: job_id, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Cancel job.
+# Inputs: job_id, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.post(
     "/jobs/{job_id}/cancel",
     summary="Cancel an ongoing ingestion job and delete any associated files and vectors",
@@ -257,9 +257,9 @@ def cancel_job(
     }
 
 
-# Objetivo: Get extracted image.
-# Entradas: document_id, filename, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Get extracted image.
+# Inputs: document_id, filename, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.get(
     "/images/{document_id}/{filename}",
     summary="Serve extracted multimodal diagrams and images",
@@ -275,9 +275,9 @@ def get_extracted_image(
     return FileResponse(image_path)
 
 
-# Objetivo: List documents.
-# Entradas: app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: List documents.
+# Inputs: app_container.
+# Output: Operation result, or None when no value is returned.
 @router.get(
     "/documents",
     summary="List all indexed documents in the vector store",
@@ -313,9 +313,9 @@ def list_documents(app_container: Container = Depends(get_container)):
         return []
 
 
-# Objetivo: Delete document.
-# Entradas: document_id, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Delete document.
+# Inputs: document_id, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.delete(
     "/documents/{document_id}",
     status_code=status.HTTP_200_OK,

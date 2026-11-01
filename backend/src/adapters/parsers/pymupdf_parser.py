@@ -15,9 +15,9 @@ from src.infrastructure.memory import release_memory
 logger = logging.getLogger(__name__)
 
 
-# Clase: PyMuPDFParser.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: PyMuPDFParser.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class PyMuPDFParser(DocumentParserPort):
     def __init__(
         self,
@@ -29,9 +29,9 @@ class PyMuPDFParser(DocumentParserPort):
         self.proximity_threshold = proximity_threshold
         self.ocr_dpi = ocr_dpi
 
-    # Objetivo: Extraer texto, tablas e imágenes del PDF y correlacionarlos por página.
-    # Entradas: file_path, document_id, progress_callback, page_callback.
-    # Salida: tupla con fragmentos de texto e imágenes extraídas.
+    # Purpose: Extract PDF text, tables, and images and correlate them by page.
+    # Inputs: file_path, document_id, progress_callback, page_callback.
+    # Output: Tuple containing text chunks and extracted images.
     def parse_pdf(
         self,
         file_path: str,

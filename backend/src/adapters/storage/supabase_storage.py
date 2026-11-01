@@ -20,15 +20,15 @@ class SupabaseStorageError(RuntimeError):
     """Raised when Supabase rejects or cannot persist a storage object."""
 
 
-# Clase: SupabaseStorageAdapter.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: SupabaseStorageAdapter.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class SupabaseStorageAdapter(LocalStorageAdapter):
     """Stores source PDFs in Supabase Storage and uses local disk for derived files."""
 
-    # Objetivo: Init.
-    # Entradas: self, base_storage_path, supabase_url, service_role_key, bucket.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, base_storage_path, supabase_url, service_role_key, bucket.
+    # Output: Operation result, or None when no value is returned.
     def __init__(
         self,
         base_storage_path: str,
@@ -59,9 +59,9 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
             safe_name = f"{safe_name}.pdf"
         return safe_name
 
-    # Objetivo: Save upload.
-    # Entradas: self, filename, content.
-    # Salida: str.
+    # Purpose: Save upload.
+    # Inputs: self, filename, content.
+    # Output: str.
     def save_upload(self, filename: str, content: Union[bytes, BinaryIO]) -> str:
         safe_filename = self._safe_object_filename(filename)
         object_url = f"{self._object_url}/uploads/{safe_filename}"
@@ -114,15 +114,15 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
                     os.remove(temp_path)
         return local_path
 
-    # Objetivo: Cleanup local cache.
-    # Entradas: self, document_id.
-    # Salida: None.
+    # Purpose: Cleanup local cache.
+    # Inputs: self, document_id.
+    # Output: None.
     def cleanup_local_cache(self, document_id: str) -> None:
         super().delete_document_files(document_id)
 
-    # Objetivo: Get upload path.
-    # Entradas: self, document_id, filename.
-    # Salida: Optional[str].
+    # Purpose: Get upload path.
+    # Inputs: self, document_id, filename.
+    # Output: Optional[str].
     def get_upload_path(self, document_id: str, filename: str) -> Optional[str]:
         safe_filename = os.path.basename(filename)
         if safe_filename != filename:
@@ -145,9 +145,9 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         except httpx.HTTPError:
             return None
 
-    # Objetivo: Save image.
-    # Entradas: self, document_id, image_filename, image_bytes.
-    # Salida: str.
+    # Purpose: Save image.
+    # Inputs: self, document_id, image_filename, image_bytes.
+    # Output: str.
     def save_image(self, document_id: str, image_filename: str, image_bytes: bytes) -> str:
         safe_document_id = os.path.basename(document_id)
         safe_image_filename = re.sub(
@@ -169,9 +169,9 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         response.raise_for_status()
         return f"supabase://{object_name}"
 
-    # Objetivo: Get image path.
-    # Entradas: self, document_id, image_filename.
-    # Salida: Optional[str].
+    # Purpose: Get image path.
+    # Inputs: self, document_id, image_filename.
+    # Output: Optional[str].
     def get_image_path(self, document_id: str, image_filename: str) -> Optional[str]:
         safe_document_id = os.path.basename(document_id)
         safe_image_filename = os.path.basename(image_filename)
@@ -197,9 +197,9 @@ class SupabaseStorageAdapter(LocalStorageAdapter):
         except httpx.HTTPError:
             return None
 
-    # Objetivo: Delete document files.
-    # Entradas: self, document_id.
-    # Salida: None.
+    # Purpose: Delete document files.
+    # Inputs: self, document_id.
+    # Output: None.
     def delete_document_files(self, document_id: str) -> None:
         try:
             object_paths: list[str] = []

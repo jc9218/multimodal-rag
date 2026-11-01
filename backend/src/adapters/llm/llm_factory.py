@@ -9,9 +9,9 @@ from src.ports.llm_port import LLMPort
 logger = logging.getLogger(__name__)
 
 
-# Clase: LLMFactory.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: LLMFactory.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class LLMFactory:
     """
     Factory & Registry for dynamically creating LLMPort implementations.
@@ -31,9 +31,9 @@ class LLMFactory:
         cls._registry[name.lower()] = adapter_cls
         logger.info(f"Registered custom LLM provider: {name}")
 
-    # Objetivo: Create.
-    # Entradas: cls, settings.
-    # Salida: LLMPort.
+    # Purpose: Create.
+    # Inputs: cls, settings.
+    # Output: LLMPort.
     @classmethod
     def create(cls, settings: Settings) -> LLMPort:
         provider = settings.LLM_PROVIDER.lower().strip()

@@ -14,9 +14,9 @@ const STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelado",
 };
 
-// Clase: contrato de datos IngestionProgressCardProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract IngestionProgressCardProps.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 interface IngestionProgressCardProps {
   job: IngestionJob;
   queueCount?: number;

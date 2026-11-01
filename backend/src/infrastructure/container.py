@@ -15,9 +15,9 @@ from src.infrastructure.config import settings
 logger = logging.getLogger(__name__)
 
 
-# Clase: Container.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: Container.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class Container:
     """
     Dependency Injection Container.
@@ -25,9 +25,9 @@ class Container:
     Supports swapping any LLM (Gemini, OpenAI, Ollama) or Vector Database via Factories.
     """
 
-    # Objetivo: Init.
-    # Entradas: self.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self.
+    # Output: Operation result, or None when no value is returned.
     def __init__(self):
         logger.info(
             f"Initializing Dependency Injection Container [LLM: {settings.LLM_PROVIDER}, VectorStore: {settings.VECTOR_STORE_PROVIDER}]..."

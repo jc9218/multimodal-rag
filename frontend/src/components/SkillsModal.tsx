@@ -13,17 +13,17 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-// Clase: contrato de datos SkillsModalProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract SkillsModalProps.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 interface SkillsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Clase: contrato de datos SkillItem.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract SkillItem.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 interface SkillItem {
   icon: React.ReactNode;
   name: string;

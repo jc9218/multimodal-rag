@@ -3,13 +3,13 @@ from typing import List, Optional
 from src.domain.models import IngestionJob, JobStatusEnum
 
 
-# Clase: JobRepositoryPort.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: JobRepositoryPort.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class JobRepositoryPort(ABC):
-    # Objetivo: Create job.
-    # Entradas: self, document_id, filename.
-    # Salida: IngestionJob.
+    # Purpose: Create job.
+    # Inputs: self, document_id, filename.
+    # Output: IngestionJob.
     @abstractmethod
     def create_job(
         self, document_id: str, filename: str, upload_id: Optional[str] = None
@@ -20,9 +20,9 @@ class JobRepositoryPort(ABC):
     def get_job_by_upload_id(self, upload_id: str) -> Optional[IngestionJob]:
         pass
 
-    # Objetivo: Get job.
-    # Entradas: self, job_id.
-    # Salida: Optional[IngestionJob].
+    # Purpose: Get job.
+    # Inputs: self, job_id.
+    # Output: Optional[IngestionJob].
     @abstractmethod
     def get_job(self, job_id: str) -> Optional[IngestionJob]:
         pass
@@ -32,9 +32,9 @@ class JobRepositoryPort(ABC):
         """Lists persisted jobs so interrupted work can be recovered after restart."""
         pass
 
-    # Objetivo: Update job status.
-    # Entradas: self, job_id, status, progress, message, error.
-    # Salida: IngestionJob.
+    # Purpose: Update job status.
+    # Inputs: self, job_id, status, progress, message, error.
+    # Output: IngestionJob.
     @abstractmethod
     def update_job_status(
         self,

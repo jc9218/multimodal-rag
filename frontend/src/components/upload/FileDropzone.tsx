@@ -8,9 +8,9 @@ const MAX_UPLOAD_SIZE_MB = Number(
 );
 const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
 
-// Clase: contrato de datos FileDropzoneProps.
-// Entradas: propiedades, callbacks o dependencias declaradas por el contrato.
-// Salida: estructura tipada consumida por la interfaz correspondiente.
+// Data contract FileDropzoneProps.
+// Inputs: Properties, callbacks, or dependencies declared by the contract.
+// Output: Typed structure consumed by the corresponding interface.
 interface FileDropzoneProps {
   uploading: boolean;
   onFilesSelected: (files: File[]) => void;
@@ -24,9 +24,9 @@ export default function FileDropzone({
 }: FileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
 
-  // Objetivo: validateAndFilterFiles.
-  // Entradas: fileList: FileList | null.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: validateAndFilterFiles.
+  // Inputs: fileList: FileList | null.
+  // Output: Value specified by the signature or operation effect.
   const validateAndFilterFiles = (fileList: FileList | null): File[] => {
     if (!fileList || fileList.length === 0) return [];
     const files = Array.from(fileList);
@@ -56,9 +56,9 @@ export default function FileDropzone({
     return validPdfs;
   };
 
-  // Objetivo: handleFileChange.
-  // Entradas: e: React.ChangeEvent<HTMLInputElement>.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleFileChange.
+  // Inputs: e: React.ChangeEvent<HTMLInputElement>.
+  // Output: Value specified by the signature or operation effect.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valid = validateAndFilterFiles(e.target.files);
     if (valid.length > 0) {
@@ -67,25 +67,25 @@ export default function FileDropzone({
     e.target.value = "";
   };
 
-  // Objetivo: handleDragOver.
-  // Entradas: e: React.DragEvent<HTMLLabelElement>.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleDragOver.
+  // Inputs: e: React.DragEvent<HTMLLabelElement>.
+  // Output: Value specified by the signature or operation effect.
   const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     if (!uploading) setIsDragging(true);
   };
 
-  // Objetivo: handleDragLeave.
-  // Entradas: e: React.DragEvent<HTMLLabelElement>.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleDragLeave.
+  // Inputs: e: React.DragEvent<HTMLLabelElement>.
+  // Output: Value specified by the signature or operation effect.
   const handleDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  // Objetivo: handleDrop.
-  // Entradas: e: React.DragEvent<HTMLLabelElement>.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleDrop.
+  // Inputs: e: React.DragEvent<HTMLLabelElement>.
+  // Output: Value specified by the signature or operation effect.
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setIsDragging(false);

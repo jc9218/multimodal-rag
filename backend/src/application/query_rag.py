@@ -8,22 +8,22 @@ from src.ports.vector_store_port import VectorStorePort
 logger = logging.getLogger(__name__)
 
 
-# Clase: QueryRAGUseCase.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: QueryRAGUseCase.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class QueryRAGUseCase:
-    # Objetivo: Init.
-    # Entradas: self, vector_store, llm.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, vector_store, llm.
+    # Output: Operation result, or None when no value is returned.
     def __init__(self, vector_store: VectorStorePort, llm: LLMPort):
         self.vector_store = vector_store
         self.llm = llm
         self._query_embedding_cache: OrderedDict[str, List[float]] = OrderedDict()
         self._query_embedding_cache_size = 256
 
-    # Objetivo: Get query embedding.
-    # Entradas: self, query.
-    # Salida: List[float].
+    # Purpose: Get query embedding.
+    # Inputs: self, query.
+    # Output: List[float].
     def _get_query_embedding(self, query: str) -> List[float]:
         cache_key = " ".join(query.lower().split())
         cached = self._query_embedding_cache.get(cache_key)
@@ -38,9 +38,9 @@ class QueryRAGUseCase:
             self._query_embedding_cache.popitem(last=False)
         return embedding
 
-    # Objetivo: Execute.
-    # Entradas: self, query, top_k, document_id, document_ids, chat_history.
-    # Salida: QueryResponse.
+    # Purpose: Execute.
+    # Inputs: self, query, top_k, document_id, document_ids, chat_history.
+    # Output: QueryResponse.
     def execute(
         self,
         query: str,
@@ -65,7 +65,7 @@ class QueryRAGUseCase:
             )
 
         # Contextual search expansion:
-        # If the user asks a short follow-up (e.g. "¿Y la aguja?", "¿Cómo se calibra?"),
+        # If the user asks a short follow-up (e.g. "And the needle?", "How is it calibrated?"),
         # anchor the retrieval query with recent conversational context.
         search_query = query
         broad_document_query = any(

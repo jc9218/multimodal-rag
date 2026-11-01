@@ -11,17 +11,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/chat", tags=["Multimodal RAG Chat"])
 
 
-# Clase: ChatHistoryItem.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: ChatHistoryItem.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class ChatHistoryItem(BaseModel):
     role: str = Field(default="user", description="'user' o 'assistant'")
     content: str = Field(..., max_length=4000, description="Contenido textual del mensaje")
 
 
-# Clase: QueryRequest.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: QueryRequest.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=2, max_length=2000, description="Pregunta en lenguaje natural")
     top_k: int = Field(default=4, ge=1, le=10, description="Cantidad de fragmentos a recuperar")
@@ -36,9 +36,9 @@ class QueryRequest(BaseModel):
     )
 
 
-# Objetivo: Query rag.
-# Entradas: request, app_container.
-# Salida: Resultado de la operación o None si no retorna un valor..
+# Purpose: Query rag.
+# Inputs: request, app_container.
+# Output: Operation result, or None when no value is returned.
 @router.post(
     "/query",
     response_model=QueryResponse,

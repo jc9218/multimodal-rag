@@ -34,9 +34,9 @@ export default function ChatInterface({
 
   const hasAttachedDocs = Boolean(chat.documentIds && chat.documentIds.length > 0);
 
-  // Objetivo: handleSendMessage.
-  // Entradas: userQuery: string.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleSendMessage.
+  // Inputs: userQuery: string.
+  // Output: Value specified by the signature or operation effect.
   const handleSendMessage = async (userQuery: string) => {
     if (!hasAttachedDocs || loading) return;
 

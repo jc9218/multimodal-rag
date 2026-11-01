@@ -49,13 +49,13 @@ def _is_retryable_gemini_error(exc: BaseException) -> bool:
     return False
 
 
-# Clase: GeminiAdapter.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: GeminiAdapter.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class GeminiAdapter(LLMPort):
-    # Objetivo: Init.
-    # Entradas: self, api_key, model, embedding_model, embedding_dim, max_context_chars, max_history_chars, max_output_tokens, thinking_budget.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, api_key, model, embedding_model, embedding_dim, max_context_chars, max_history_chars, max_output_tokens, thinking_budget.
+    # Output: Operation result, or None when no value is returned.
     def __init__(
         self,
         api_key: str = "",
@@ -281,9 +281,9 @@ class GeminiAdapter(LLMPort):
             results.append(self._embed_single(text, task_type=task_type))
         return results
 
-    # Objetivo: Call gemini embed.
-    # Entradas: self, texts.
-    # Salida: List[List[float]].
+    # Purpose: Call gemini embed.
+    # Inputs: self, texts.
+    # Output: List[List[float]].
     @retry(
         retry=retry_if_exception(_is_retryable_gemini_error),
         wait=wait_random_exponential(multiplier=1, min=1, max=4),
@@ -295,9 +295,9 @@ class GeminiAdapter(LLMPort):
             return [[0.01 * (i % 10) for i in range(self.embedding_dim)] for _ in texts]
         return self._embed_batch(texts, task_type="retrieval_document")
 
-    # Objetivo: Generate embeddings.
-    # Entradas: self, texts.
-    # Salida: List[List[float]].
+    # Purpose: Generate embeddings.
+    # Inputs: self, texts.
+    # Output: List[List[float]].
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         if not texts:
             return []
@@ -315,18 +315,18 @@ class GeminiAdapter(LLMPort):
                 raise LLMServiceError(f"Gemini embeddings error: {e}") from e
             raise
 
-    # Objetivo: Generate query embedding.
-    # Entradas: self, query.
-    # Salida: List[float].
+    # Purpose: Generate query embedding.
+    # Inputs: self, query.
+    # Output: List[float].
     def generate_query_embedding(self, query: str) -> List[float]:
         if not self._genai_client and not self._legacy_genai:
             return [0.01 * (i % 10) for i in range(self.embedding_dim)]
 
         return self._embed_single(query, task_type="retrieval_query")
 
-    # Objetivo: Check is defensive.
-    # Entradas: self, answer.
-    # Salida: bool.
+    # Purpose: Check is defensive.
+    # Inputs: self, answer.
+    # Output: bool.
     def _check_is_defensive(self, answer: str) -> bool:
         low = answer.lower()
         phrases = [
@@ -339,9 +339,9 @@ class GeminiAdapter(LLMPort):
         ]
         return any(p in low for p in phrases) or ("documentación proporcionada" in low and "suficiente" in low)
 
-    # Objetivo: Call gemini model.
-    # Entradas: self, prompt.
-    # Salida: str.
+    # Purpose: Call gemini model.
+    # Inputs: self, prompt.
+    # Output: str.
     @retry(
         retry=retry_if_exception(_is_retryable_gemini_error),
         wait=wait_random_exponential(multiplier=1, min=1, max=10),
@@ -387,15 +387,15 @@ class GeminiAdapter(LLMPort):
 
         raise LLMServiceError("No Gemini client initialized.")
 
-    # Objetivo: Call gemini generate.
-    # Entradas: self, prompt.
-    # Salida: str.
+    # Purpose: Call gemini generate.
+    # Inputs: self, prompt.
+    # Output: str.
     def _call_gemini_generate(self, prompt: str) -> str:
         return self._call_gemini_model(prompt)
 
-    # Objetivo: Generate defensive answer.
-    # Entradas: self, query, context_chunks, chat_history.
-    # Salida: Tuple[str, bool].
+    # Purpose: Generate defensive answer.
+    # Inputs: self, query, context_chunks, chat_history.
+    # Output: Tuple[str, bool].
     def generate_defensive_answer(
         self,
         query: str,

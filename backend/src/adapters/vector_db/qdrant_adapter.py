@@ -60,9 +60,9 @@ def _chunk_search_text(chunk: Chunk) -> str:
     return f"{document_name} {chunk.text}"
 
 
-# Objetivo: Is document identity query.
-# Entradas: query.
-# Salida: bool.
+# Purpose: Is document identity query.
+# Inputs: query.
+# Output: bool.
 def _is_document_identity_query(query: str) -> bool:
     tokens = set(_tokenize_bm25(query))
     return bool(
@@ -83,9 +83,9 @@ def _is_document_identity_query(query: str) -> bool:
     )
 
 
-# Objetivo: Is broad query.
-# Entradas: query.
-# Salida: bool.
+# Purpose: Is broad query.
+# Inputs: query.
+# Output: bool.
 def _is_broad_query(query: str) -> bool:
     normalized = " ".join(query.lower().split())
     return any(
@@ -104,13 +104,13 @@ def _is_broad_query(query: str) -> bool:
     )
 
 
-# Clase: QdrantAdapter.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: QdrantAdapter.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class QdrantAdapter(VectorStorePort):
-    # Objetivo: Init.
-    # Entradas: self, url, api_key, collection_name, vector_dim, upsert_batch_size, bm25_max_chunks.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, url, api_key, collection_name, vector_dim, upsert_batch_size, bm25_max_chunks.
+    # Output: Operation result, or None when no value is returned.
     def __init__(
         self,
         url: str = "http://localhost:6333",
@@ -210,9 +210,9 @@ class QdrantAdapter(VectorStorePort):
 
         return list(matched.values())
 
-    # Objetivo: Document scoped fallback.
-    # Entradas: self, top_k, document_id, document_ids.
-    # Salida: List[RetrievedChunk].
+    # Purpose: Document scoped fallback.
+    # Inputs: self, top_k, document_id, document_ids.
+    # Output: List[RetrievedChunk].
     def _document_scoped_fallback(
         self,
         top_k: int,
@@ -298,9 +298,9 @@ class QdrantAdapter(VectorStorePort):
             )
         return retrieved
 
-    # Objetivo: Initialize.
-    # Entradas: self.
-    # Salida: None.
+    # Purpose: Initialize.
+    # Inputs: self.
+    # Output: None.
     def initialize(self) -> None:
         if not self.client:
             return
@@ -447,9 +447,9 @@ class QdrantAdapter(VectorStorePort):
         except Exception as e:
             logger.warning(f"Could not rehydrate BM25 index from Qdrant: {e}")
 
-    # Objetivo: Index chunks.
-    # Entradas: self, chunks, progress_callback.
-    # Salida: int.
+    # Purpose: Index chunks.
+    # Inputs: self, chunks, progress_callback.
+    # Output: int.
     def index_chunks(
         self,
         chunks: List[Chunk],
@@ -540,9 +540,9 @@ class QdrantAdapter(VectorStorePort):
         release_memory()
         return len(chunks)
 
-    # Objetivo: Trim bm25 memory.
-    # Entradas: self.
-    # Salida: None.
+    # Purpose: Trim bm25 memory.
+    # Inputs: self.
+    # Output: None.
     def _trim_bm25_memory(self) -> None:
         overflow = len(self._bm25_chunk_ids) - self.bm25_max_chunks
         if overflow <= 0:
@@ -553,9 +553,9 @@ class QdrantAdapter(VectorStorePort):
         for chunk_id in evicted_ids:
             self._corpus_chunks.pop(chunk_id, None)
 
-    # Objetivo: Upsert points batch.
-    # Entradas: self, points, processed, total, progress_callback.
-    # Salida: None.
+    # Purpose: Upsert points batch.
+    # Inputs: self, points, processed, total, progress_callback.
+    # Output: None.
     def _upsert_points_batch(
         self,
         points: List[qmodels.PointStruct],
@@ -627,9 +627,9 @@ class QdrantAdapter(VectorStorePort):
                         ]
                     )
 
-                # Objetivo: Execute qdrant query.
-                # Entradas: Ninguna..
-                # Salida: Resultado de la operación o None si no retorna un valor..
+                # Purpose: Execute qdrant query.
+                # Inputs: None.
+                # Output: Operation result, or None when no value is returned.
                 def _execute_qdrant_query():
                     if hasattr(self.client, "query_points"):
                         try:

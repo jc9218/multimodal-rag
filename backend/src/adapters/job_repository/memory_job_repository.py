@@ -6,20 +6,20 @@ from src.domain.models import IngestionJob, JobStatusEnum
 from src.ports.job_repository_port import JobRepositoryPort
 
 
-# Clase: MemoryJobRepository.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: MemoryJobRepository.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class MemoryJobRepository(JobRepositoryPort):
-    # Objetivo: Init.
-    # Entradas: self.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self.
+    # Output: Operation result, or None when no value is returned.
     def __init__(self):
         self._jobs: Dict[str, IngestionJob] = {}
         self._lock = threading.Lock()
 
-    # Objetivo: Create job.
-    # Entradas: self, document_id, filename.
-    # Salida: IngestionJob.
+    # Purpose: Create job.
+    # Inputs: self, document_id, filename.
+    # Output: IngestionJob.
     def create_job(
         self, document_id: str, filename: str, upload_id: Optional[str] = None
     ) -> IngestionJob:
@@ -44,16 +44,16 @@ class MemoryJobRepository(JobRepositoryPort):
                 None,
             )
 
-    # Objetivo: Get job.
-    # Entradas: self, job_id.
-    # Salida: Optional[IngestionJob].
+    # Purpose: Get job.
+    # Inputs: self, job_id.
+    # Output: Optional[IngestionJob].
     def get_job(self, job_id: str) -> Optional[IngestionJob]:
         with self._lock:
             return self._jobs.get(job_id)
 
-    # Objetivo: Update job status.
-    # Entradas: self, job_id, status, progress, message, error.
-    # Salida: IngestionJob.
+    # Purpose: Update job status.
+    # Inputs: self, job_id, status, progress, message, error.
+    # Output: IngestionJob.
     def update_job_status(
         self,
         job_id: str,
@@ -73,9 +73,9 @@ class MemoryJobRepository(JobRepositoryPort):
             job.updated_at = datetime.now(timezone.utc)
             return job
 
-    # Objetivo: List jobs.
-    # Entradas: self.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: List jobs.
+    # Inputs: self.
+    # Output: Operation result, or None when no value is returned.
     def list_jobs(self):
         with self._lock:
             return list(self._jobs.values())

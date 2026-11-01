@@ -3,9 +3,9 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-# Clase: Settings.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: Settings.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     PORT: int = 8000
@@ -59,9 +59,9 @@ class Settings(BaseSettings):
         """Returns LLM_PROVIDER_API_KEY configured for the active LLM provider."""
         return self.LLM_PROVIDER_API_KEY
 
-    # Objetivo: Cors origins list.
-    # Entradas: self.
-    # Salida: List[str].
+    # Purpose: CORS origins list.
+    # Inputs: self.
+    # Output: List[str].
     @property
     def cors_origins_list(self) -> List[str]:
         raw = self.CORS_ORIGINS.strip()
@@ -76,9 +76,9 @@ class Settings(BaseSettings):
             return [raw]
         return ["*"]
 
-    # Objetivo: Max upload size bytes.
-    # Entradas: self.
-    # Salida: int.
+    # Purpose: Maximum upload size in bytes.
+    # Inputs: self.
+    # Output: int.
     @property
     def max_upload_size_bytes(self) -> int:
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024

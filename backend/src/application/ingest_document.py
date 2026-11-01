@@ -25,13 +25,13 @@ def _process_memory_mb() -> int:
     return get_process_memory_mb()
 
 
-# Clase: IngestDocumentUseCase.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: IngestDocumentUseCase.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class IngestDocumentUseCase:
-    # Objetivo: Init.
-    # Entradas: self, parser, vector_store, llm, job_repo.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, parser, vector_store, llm, job_repo.
+    # Output: Operation result, or None when no value is returned.
     def __init__(
         self,
         parser: DocumentParserPort,
@@ -66,9 +66,9 @@ class IngestDocumentUseCase:
                 document_id,
             )
 
-    # Objetivo: Cleanup local cache.
-    # Entradas: self, document_id.
-    # Salida: None.
+    # Purpose: Cleanup local cache.
+    # Inputs: self, document_id.
+    # Output: None.
     def _cleanup_local_cache(self, document_id: str) -> None:
         cleanup = getattr(self.parser.storage, "cleanup_local_cache", None)
         if cleanup:
@@ -80,9 +80,9 @@ class IngestDocumentUseCase:
                     document_id,
                 )
 
-    # Objetivo: Cancel and cleanup.
-    # Entradas: self, job_id, document_id.
-    # Salida: bool.
+    # Purpose: Cancel and cleanup.
+    # Inputs: self, job_id, document_id.
+    # Output: bool.
     def _cancel_and_cleanup(self, job_id: str, document_id: str) -> bool:
         if not self._is_cancelled(job_id):
             return False
@@ -271,9 +271,9 @@ class IngestDocumentUseCase:
                 )
 
                 # Step 1: Multimodal Extraction and Spatial Correlation
-                # Objetivo: Report extraction progress.
-                # Entradas: fraction, detail.
-                # Salida: None.
+                # Purpose: Report extraction progress.
+                # Inputs: fraction, detail.
+                # Output: None.
                 def report_extraction_progress(fraction: float, detail: str) -> None:
                     progress = 0.05 + 0.25 * max(0.0, min(1.0, fraction))
                     self.job_repo.update_job_status(
@@ -292,9 +292,9 @@ class IngestDocumentUseCase:
                     else None
                 )
 
-                # Objetivo: Index page.
-                # Entradas: page_num, total_pages, page_chunks, page_images.
-                # Salida: None.
+                # Purpose: Index page.
+                # Inputs: page_num, total_pages, page_chunks, page_images.
+                # Output: None.
                 def index_page(
                     page_num: int,
                     total_pages: int,
@@ -471,9 +471,9 @@ class IngestDocumentUseCase:
                     return
 
                 # Step 3: Indexing in Vector Store (Qdrant + BM25)
-                # Objetivo: Report indexing progress.
-                # Entradas: fraction, detail.
-                # Salida: None.
+                # Purpose: Report indexing progress.
+                # Inputs: fraction, detail.
+                # Output: None.
                 def report_indexing_progress(fraction: float, detail: str) -> None:
                     progress = 0.70 + 0.28 * max(0.0, min(1.0, fraction))
                     self.job_repo.update_job_status(

@@ -4,19 +4,19 @@ from src.domain.models import IngestionJob
 from src.ports.job_repository_port import JobRepositoryPort
 
 
-# Clase: GetJobStatusUseCase.
-# Entradas: configuración, dependencias o datos definidos por sus atributos.
-# Salida: instancia que encapsula el comportamiento o modelo indicado.
+# Class: GetJobStatusUseCase.
+# Inputs: Configuration, dependencies, or data defined by its attributes.
+# Output: Instance encapsulating the specified behavior or model.
 class GetJobStatusUseCase:
-    # Objetivo: Init.
-    # Entradas: self, job_repo.
-    # Salida: Resultado de la operación o None si no retorna un valor..
+    # Purpose: Init.
+    # Inputs: self, job_repo.
+    # Output: Operation result, or None when no value is returned.
     def __init__(self, job_repo: JobRepositoryPort):
         self.job_repo = job_repo
 
-    # Objetivo: Execute.
-    # Entradas: self, job_id.
-    # Salida: IngestionJob.
+    # Purpose: Execute.
+    # Inputs: self, job_id.
+    # Output: IngestionJob.
     def execute(self, job_id: str) -> IngestionJob:
         job = self.job_repo.get_job(job_id)
         if not job:

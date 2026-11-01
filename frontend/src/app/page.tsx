@@ -224,9 +224,9 @@ export default function Home() {
     (doc) => !activeChat.documentIds.includes(doc.id)
   );
 
-  // Objetivo: handleCreateChat.
-  // Entradas: Ninguna..
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleCreateChat.
+  // Inputs: None.
+  // Output: Value specified by the signature or operation effect.
   const handleCreateChat = () => {
     const newId = `chat_${Date.now()}`;
     const newTitle = `Nuevo Chat ${chats.length + 1}`;
@@ -235,9 +235,9 @@ export default function Home() {
     setActiveChatId(newId);
   };
 
-  // Objetivo: handleDeleteChat.
-  // Entradas: chatId: string, e: React.MouseEvent.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleDeleteChat.
+  // Inputs: chatId: string, e: React.MouseEvent.
+  // Output: Value specified by the signature or operation effect.
   const handleDeleteChat = async (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const chatToDelete = chats.find((c) => c.id === chatId);
@@ -296,9 +296,9 @@ export default function Home() {
     }
   };
 
-  // Objetivo: handleRenameChat.
-  // Entradas: chatId: string, newTitle: string.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleRenameChat.
+  // Inputs: chatId: string, newTitle: string.
+  // Output: Value specified by the signature or operation effect.
   const handleRenameChat = (chatId: string, newTitle: string) => {
     setChats((prev) =>
       prev.map((c) =>
@@ -321,18 +321,18 @@ export default function Home() {
     );
   };
 
-  // Objetivo: handleUpdateMessages.
-  // Entradas: chatId: string, messages: Message[].
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleUpdateMessages.
+  // Inputs: chatId: string, messages: Message[].
+  // Output: Value specified by the signature or operation effect.
   const handleUpdateMessages = (chatId: string, messages: Message[]) => {
     setChats((prev) =>
       prev.map((c) => (c.id === chatId ? { ...c, messages } : c))
     );
   };
 
-  // Objetivo: handleClearChat.
-  // Entradas: chatId: string.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleClearChat.
+  // Inputs: chatId: string.
+  // Output: Value specified by the signature or operation effect.
   const handleClearChat = (chatId: string) => {
     setChats((prev) =>
       prev.map((c) => {
@@ -353,9 +353,9 @@ export default function Home() {
     );
   };
 
-  // Objetivo: handleToggleDocForActiveChat.
-  // Entradas: chatId: string, docId: string.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleToggleDocForActiveChat.
+  // Inputs: chatId: string, docId: string.
+  // Output: Value specified by the signature or operation effect.
   const handleToggleDocForActiveChat = (chatId: string, docId: string) => {
     setChats((prev) =>
       prev.map((c) => {
@@ -406,9 +406,9 @@ export default function Home() {
     );
   };
 
-  // Objetivo: handleDeleteDocument.
-  // Entradas: docId: string, docName: string.
-  // Salida: valor indicado por la firma o efecto de la operación.
+  // Purpose: handleDeleteDocument.
+  // Inputs: docId: string, docName: string.
+  // Output: Value specified by the signature or operation effect.
   const handleDeleteDocument = async (docId: string, docName: string) => {
     if (
       !confirm(
